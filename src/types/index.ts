@@ -60,10 +60,12 @@ export interface AppConfig {
   mapbox_style_url: string | null;
   vehicle_types: VehicleType[];
   currency: string;
+  // Shapes per FRONTEND_INTEGRATION.md §3 — each setting is a small object,
+  // not a bare value.
   settings: {
-    booking_enabled: boolean;
-    support_phone: string | null;
-    min_app_version: string | null;
+    booking_enabled: { enabled: boolean };
+    support_phone: { number: string | null };
+    min_app_version: { ios: string; android: string } | null;
   };
 }
 
@@ -72,9 +74,17 @@ export interface LatLng {
   longitude: number;
 }
 
-// BookingOut — the fields used by the booking/tracking flow so far
-// (crash-resume banner, creation response, /bookings/current). `route_geometry`
-// is left out until the map is wired in Phase 7.
+// GeoJSON LineString as returned by POST /bookings `route_geometry` (§5).
+// Coordinates are [lng, lat] pairs — Mapbox order.
+export interface RouteGeometry {
+  type: 'LineString';
+  coordinates: [number, number][];
+}
+
+// BookingOut — the fields used by the booking/tracking flow.
+// `route_geometry` and `reference` are documented on the ride-offer / shared-trip
+// payloads (§5, §8); they are treated as optional on this shape since the guide
+// does not spell them out on every BookingOut response.
 export interface BookingOut {
   id: string;
   status: BookingStatus;
@@ -84,6 +94,8 @@ export interface BookingOut {
   drop_address: string;
   fare: number | null;
   created_at: string;
+  reference?: string;
+  route_geometry?: RouteGeometry | null;
 }
 
 // GET /places/search, GET /places/reverse, GET /places/saved
@@ -109,6 +121,26 @@ export interface FareEstimate {
   duration_min: number;
   surge_multiplier: number;
 }
+
+// POST /bookings/quote — same maths as one estimate row plus a full breakdown (§5).
+export interface FareQuote extends FareEstimate {
+  base_fare: number;
+  distance_fare: number;
+  time_fare: number;
+  waiting_charge: number;
+}
+
+// UI copy for each server vehicle_type. Screens render only the types /config
+// returns, so a new server-side type just needs a row added here.
+// TODO(phase-2): swap `glyph` text for real vehicle artwork.
+export const VEHICLE_META: Record<VehicleType, { label: string; glyph: string; seats: string }> = {
+  bike: { label: 'Bike', glyph: 'BIKE', seats: '1 seat' },
+  auto: { label: 'Auto', glyph: 'AUTO', seats: '3 seats' },
+  car: { label: 'Car', glyph: 'CAR', seats: '4 seats · AC' },
+};
+
+// ₹ formatter — rounds to whole rupees for display.
+export const rupees = (n: number): string => `₹${Math.round(n)}`;
 
 // GET /bookings/{id}/live
 export interface BookingLive {

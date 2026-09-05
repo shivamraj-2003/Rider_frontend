@@ -92,7 +92,16 @@ async function request<T>(method: string, path: string, body?: unknown, retry = 
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
     const e = json.error ?? {};
-    throw new ApiError(e.code ?? 'unknown', e.message ?? 'Something went wrong', res.status, e.details);
+    // Every response carries X-Request-ID; quoting it makes a bug report
+    // answerable in seconds (FRONTEND_INTEGRATION.md §4).
+    const requestId = res.headers.get('X-Request-ID') ?? undefined;
+    if (requestId) {
+      console.warn(`[api] ${method} ${path} → ${res.status} ${e.code ?? 'unknown'} (X-Request-ID: ${requestId})`);
+    }
+    throw new ApiError(e.code ?? 'unknown', e.message ?? 'Something went wrong', res.status, {
+      ...(e.details ?? {}),
+      ...(requestId ? { request_id: requestId } : {}),
+    });
   }
   return json as T;
 }

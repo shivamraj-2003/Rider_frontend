@@ -14,3 +14,9 @@ function requireEnv(name: string, value: string | undefined): string {
 // Rider_backend's base URL, e.g. http://192.168.1.9:8000 — its routes are at
 // the root (no /api/v1 prefix), so this is used as-is: `${API_URL}/auth/me`.
 export const API_URL = requireEnv('EXPO_PUBLIC_API_URL', process.env.EXPO_PUBLIC_API_URL);
+
+// WebSocket base — derived from API_URL (http→ws, https→wss) unless an explicit
+// EXPO_PUBLIC_WS_URL is set. The backend accepts the token in the query string
+// (§8), so this is just the origin.
+export const WS_URL =
+  process.env.EXPO_PUBLIC_WS_URL ?? API_URL.replace(/^http(s?):\/\//, 'ws$1://');

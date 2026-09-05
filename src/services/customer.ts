@@ -1,7 +1,16 @@
 // Typed wrappers around the customer-facing booking endpoints
 // (FRONTEND_INTEGRATION.md §5). Kept thin — screens call these directly.
 import { api } from './api';
-import type { BookingLive, BookingOut, FareEstimate, PaymentMethod, Place, SavedPlace, VehicleType } from '../types';
+import type {
+  BookingLive,
+  BookingOut,
+  FareEstimate,
+  FareQuote,
+  PaymentMethod,
+  Place,
+  SavedPlace,
+  VehicleType,
+} from '../types';
 
 export function searchPlaces(query: string, near?: { lat: number; lng: number }, limit = 6) {
   const params = new URLSearchParams({ q: query, limit: String(limit) });
@@ -16,6 +25,17 @@ export function getSavedPlaces() {
   return api.get<SavedPlace[]>('/places/saved');
 }
 
+// GET /places/reverse — map pin / current position → a Place (or null).
+export function reverseGeocode(lat: number, lng: number) {
+  const params = new URLSearchParams({ lat: String(lat), lng: String(lng) });
+  return api.get<Place | null>(`/places/reverse?${params.toString()}`);
+}
+
+// POST /places/saved — re-posting a label moves it.
+export function savePlace(payload: { label: string; address: string; lat: number; lng: number }) {
+  return api.post<SavedPlace>('/places/saved', payload);
+}
+
 export interface EstimatesRequest {
   pickup_lat: number;
   pickup_lng: number;
@@ -26,6 +46,11 @@ export interface EstimatesRequest {
 
 export function getFareEstimates(payload: EstimatesRequest) {
   return api.post<FareEstimate[]>('/bookings/estimates', payload);
+}
+
+// POST /bookings/quote — full breakdown for a single vehicle type (§5).
+export function getFareQuote(payload: EstimatesRequest) {
+  return api.post<FareQuote>('/bookings/quote', payload);
 }
 
 export interface CreateBookingRequest {

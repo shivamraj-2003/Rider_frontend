@@ -11,6 +11,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as Location from 'expo-location';
+import { IconArrowLeft } from '@tabler/icons-react-native';
 import { colors, font, radius } from '../../theme';
 import { PlaceRow, TripRail } from '../../components/booking';
 import { searchPlaces, getSavedPlaces, reverseGeocode } from '../../services/customer';
@@ -138,7 +139,7 @@ export default function DestinationSearchScreen({ navigation, route }: Props) {
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <Text style={styles.backArrow}>←</Text>
+            <IconArrowLeft size={20} color={colors.navy800} strokeWidth={2} />
           </Pressable>
           <Text style={styles.headerTitle}>Plan your trip</Text>
         </View>
@@ -236,7 +237,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backArrow: { fontSize: 17, color: colors.navy800 },
   headerTitle: { fontFamily: font.bold, fontSize: 17, color: colors.navy800 },
   field: {
     height: 56,

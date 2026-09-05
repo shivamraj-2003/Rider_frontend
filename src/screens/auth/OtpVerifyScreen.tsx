@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { IconArrowLeft } from '@tabler/icons-react-native';
 import { useAuth, ApiError } from '../../context/AuthContext';
 import { colors, type, font, radius, space } from '../../theme';
 import Button from '../../components/Button';
@@ -77,7 +78,7 @@ export default function OtpVerifyScreen({ route, navigation }: Props) {
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >
-          <Text style={styles.backArrow}>←</Text>
+          <IconArrowLeft size={20} color={colors.navy800} strokeWidth={2} />
         </Pressable>
 
         <View style={styles.heading}>
@@ -133,7 +134,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backArrow: { fontSize: 18, color: colors.navy800 },
   heading: { gap: space.sm },
   strong: { fontFamily: font.semibold, color: colors.navy800 },
   error: { fontFamily: font.medium, fontSize: 13, color: colors.danger, marginTop: -space.md },

@@ -11,6 +11,8 @@ interface AuthContextValue {
   verifyOtp: (phone: string, code: string) => Promise<Session>;
   completeProfile: (full_name: string, email?: string) => Promise<void>;
   signOut: () => Promise<void>;
+  refreshUser: () => Promise<void>;
+  switchRole: (role: 'customer' | 'rider') => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -80,8 +82,21 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setStatus('signed-out');
   };
 
+  const refreshUser = async () => {
+    const fresh = await api.get<UserOut>('/auth/me');
+    setUser(fresh);
+  };
+
+  // `role` is a query param on the backend, not a JSON body (see
+  // FRONTEND_INTEGRATION.md). Switching is instant and needs no new sign-in —
+  // the same account just gets a different `role` and the navigator swaps.
+  const switchRole = async (role: 'customer' | 'rider') => {
+    await api.post(`/auth/register-role?role=${role}`);
+    await refreshUser();
+  };
+
   const value = useMemo(
-    () => ({ status, user, sendOtp, verifyOtp, completeProfile, signOut }),
+    () => ({ status, user, sendOtp, verifyOtp, completeProfile, signOut, refreshUser, switchRole }),
     [status, user]
   );
 

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { IconArrowLeft } from '@tabler/icons-react-native';
 import { useAppConfig } from '../../context/AppConfigContext';
 import { getFareEstimates } from '../../services/customer';
 import { ApiError } from '../../services/api';
@@ -67,7 +68,7 @@ export default function RideSelectScreen({ navigation, route }: Props) {
         accessibilityRole="button"
         accessibilityLabel="Go back"
       >
-        <Text style={styles.backArrow}>←</Text>
+        <IconArrowLeft size={20} color={colors.navy800} strokeWidth={2} />
       </Pressable>
 
       <View style={styles.sheetWrap}>
@@ -100,7 +101,7 @@ export default function RideSelectScreen({ navigation, route }: Props) {
                   <VehicleRow
                     key={e.vehicle_type}
                     label={meta.label}
-                    glyph={meta.glyph}
+                    icon={meta.icon}
                     meta={`${e.duration_min} min · ${meta.seats}`}
                     fare={e.fare}
                     badge={
@@ -148,7 +149,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...shadow.card,
   },
-  backArrow: { fontSize: 17, color: colors.navy800 },
   sheetWrap: { marginTop: 'auto' },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: { fontFamily: font.extrabold, fontSize: 20, letterSpacing: -0.4, color: colors.navy800 },

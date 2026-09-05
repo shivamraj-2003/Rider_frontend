@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { IconArrowLeft, IconCash, IconQrcode } from '@tabler/icons-react-native';
 import { useAppConfig } from '../../context/AppConfigContext';
 import { createBooking, getFareQuote } from '../../services/customer';
 import { ApiError } from '../../services/api';
@@ -98,7 +99,7 @@ export default function PaymentScreen({ navigation, route }: Props) {
         accessibilityRole="button"
         accessibilityLabel="Go back"
       >
-        <Text style={styles.backArrow}>←</Text>
+        <IconArrowLeft size={20} color={colors.navy800} strokeWidth={2} />
       </Pressable>
 
       <View style={styles.sheetWrap}>
@@ -109,7 +110,7 @@ export default function PaymentScreen({ navigation, route }: Props) {
             <PaymentRow
               label="Cash"
               sub="Pay the rider directly"
-              glyph="CASH"
+              icon={IconCash}
               selected={method === 'cash'}
               onPress={() => setMethod('cash')}
             />
@@ -117,7 +118,7 @@ export default function PaymentScreen({ navigation, route }: Props) {
               <PaymentRow
                 label="Pay online"
                 sub="UPI, card or netbanking"
-                glyph="UPI"
+                icon={IconQrcode}
                 selected={method === 'online'}
                 onPress={() => setMethod('online')}
               />
@@ -161,7 +162,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...shadow.card,
   },
-  backArrow: { fontSize: 17, color: colors.navy800 },
   sheetWrap: { marginTop: 'auto' },
   title: { fontFamily: font.extrabold, fontSize: 20, letterSpacing: -0.4, color: colors.navy800 },
   rows: { gap: 10 },

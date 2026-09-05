@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet, StyleProp, ViewStyle } from 'react-native';
+import type { Icon } from '@tabler/icons-react-native';
 import { colors, type, radius, shadow, font } from '../theme';
 import { rupees } from '../types';
 
@@ -40,12 +41,11 @@ export function Badge({
   );
 }
 
-// TODO(phase-2): replace the text glyph with real vehicle / payment artwork.
 export function GlyphTile({
-  label,
+  icon: IconComp,
   tone = 'muted',
 }: {
-  label: string;
+  icon: Icon;
   tone?: 'accent' | 'muted' | 'dark';
 }) {
   const bg =
@@ -54,14 +54,14 @@ export function GlyphTile({
     tone === 'accent' ? colors.accentDark : tone === 'dark' ? colors.white : colors.navy600;
   return (
     <View style={[s.glyphTile, { backgroundColor: bg }]}>
-      <Text style={[s.glyph, { color: fg }]}>{label}</Text>
+      <IconComp size={24} color={fg} strokeWidth={1.75} />
     </View>
   );
 }
 
 export function VehicleRow({
   label,
-  glyph,
+  icon,
   meta,
   fare,
   strikeFare,
@@ -70,7 +70,7 @@ export function VehicleRow({
   onPress,
 }: {
   label: string;
-  glyph: string;
+  icon: Icon;
   meta: string;
   fare: number;
   strikeFare?: number;
@@ -89,7 +89,7 @@ export function VehicleRow({
         pressed && !selected && s.rowPressed,
       ]}
     >
-      <GlyphTile label={glyph} tone={selected ? 'accent' : 'muted'} />
+      <GlyphTile icon={icon} tone={selected ? 'accent' : 'muted'} />
       <View style={s.rowBody}>
         <View style={s.rowTitleLine}>
           <Text style={s.rowLabel} numberOfLines={1}>
@@ -112,14 +112,14 @@ export function VehicleRow({
 export function PaymentRow({
   label,
   sub,
-  glyph,
+  icon,
   selected,
   onPress,
   disabled,
 }: {
   label: string;
   sub: string;
-  glyph: string;
+  icon: Icon;
   selected?: boolean;
   onPress: () => void;
   disabled?: boolean;
@@ -131,7 +131,7 @@ export function PaymentRow({
       accessibilityState={{ selected: !!selected, disabled: !!disabled }}
       style={[s.row, selected && s.rowSelected, disabled && s.rowDisabled]}
     >
-      <GlyphTile label={glyph} tone={selected ? 'dark' : 'muted'} />
+      <GlyphTile icon={icon} tone={selected ? 'dark' : 'muted'} />
       <View style={s.rowBody}>
         <Text style={s.rowLabel}>{label}</Text>
         <Text style={s.rowMeta}>{sub}</Text>
@@ -301,7 +301,6 @@ const s = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   glyphTile: { width: 52, height: 52, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
-  glyph: { fontFamily: font.bold, fontSize: 11, letterSpacing: 0.5 },
   badge: { paddingHorizontal: 6, paddingVertical: 3, borderRadius: radius.pill },
   badgeAccent: { backgroundColor: colors.accent },
   badgeOutline: { borderWidth: 1, borderColor: colors.navy800 },

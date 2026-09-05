@@ -1,22 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import ScreenScaffold from '../../components/ScreenScaffold';
 import InfoCard from '../../components/InfoCard';
 import Button from '../../components/Button';
-import TextField from '../../components/TextField';
-import { useAuth } from '../../context/AuthContext';
-import { getRiderMe, onboardRider, uploadRiderDocument } from '../../services/rider';
-import { ApiError } from '../../services/api';
-import { colors, radius, spacing, typography } from '../../theme';
-import type { RiderMe, VehicleType } from '../../types';
+import { useAuth, ApiError } from '../../context/AuthContext';
+import { getRiderMe, uploadRiderDocument } from '../../services/rider';
+import { colors, spacing, typography } from '../../theme';
+import type { RiderMe } from '../../types';
 
-const VEHICLE_TYPES: VehicleType[] = ['bike', 'auto', 'car'];
-
+// RiderNavigator's gate only ever mounts this screen once RiderProfile.status
+// === 'approved', so this is a read-only profile view, not an onboarding
+// form — onboarding lives in the "Become a Rider" wizard (BecomeRiderNavigator).
 export default function RiderProfileScreen() {
-  const { user } = useAuth();
+  const { user, switchRole } = useAuth();
   const [riderMe, setRiderMe] = useState<RiderMe | null>(null);
   const [loading, setLoading] = useState(true);
+  const [switching, setSwitching] = useState(false);
+  const [switchError, setSwitchError] = useState<string | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -28,6 +29,17 @@ export default function RiderProfileScreen() {
 
   useEffect(load, []);
 
+  const handleSwitchToUser = async () => {
+    setSwitchError(null);
+    setSwitching(true);
+    try {
+      await switchRole('customer');
+    } catch (err) {
+      setSwitching(false);
+      setSwitchError(err instanceof ApiError ? err.message : 'Could not switch to User Mode.');
+    }
+  };
+
   return (
     <ScreenScaffold title="Rider Profile">
       <InfoCard label="Name" value={user?.full_name ?? '—'} />
@@ -37,9 +49,12 @@ export default function RiderProfileScreen() {
         <ActivityIndicator color={colors.primary} />
       ) : riderMe ? (
         <RiderDetails riderMe={riderMe} onDocumentsUploaded={load} />
-      ) : (
-        <OnboardingForm onOnboarded={load} />
-      )}
+      ) : null}
+
+      <View style={styles.section}>
+        <Button title="Switch to User Mode" variant="navy" onPress={handleSwitchToUser} loading={switching} />
+        {switchError ? <Text style={styles.error}>{switchError}</Text> : null}
+      </View>
     </ScreenScaffold>
   );
 }
@@ -70,86 +85,37 @@ function RiderDetails({ riderMe, onDocumentsUploaded }: { riderMe: RiderMe; onDo
 
   return (
     <View style={styles.section}>
-      <InfoCard label="Vehicle" value={`${riderMe.vehicle_type} · ${riderMe.vehicle_number}`} />
-      <InfoCard label="Model" value={riderMe.vehicle_model} />
-      <InfoCard label="Status" value={riderMe.status.replace(/_/g, ' ')} />
+      <InfoCard label="Vehicle" value={`${riderMe.vehicle_type} · ${riderMe.vehicle_number ?? '—'}`} />
+      <InfoCard label="Rating" value={riderMe.rating != null ? riderMe.rating.toFixed(1) : '—'} />
+      <InfoCard label="Total trips" value={String(riderMe.total_trips)} />
 
-      {riderMe.status === 'pending_verification' ? (
-        <View style={styles.docSection}>
-          <Text style={styles.docLabel}>Upload documents for verification</Text>
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-          <Button
-            title="Upload licence"
-            variant="secondary"
-            onPress={() => handleUpload('licence')}
-            loading={uploading === 'licence'}
+      {riderMe.bank_account_holder ? (
+        <>
+          <InfoCard label="Payout account holder" value={riderMe.bank_account_holder} />
+          <InfoCard
+            label="Payout account"
+            value={riderMe.bank_account_number ? `•••• ${riderMe.bank_account_number.slice(-4)}` : '—'}
           />
-          <Button
-            title="Upload RC"
-            variant="secondary"
-            onPress={() => handleUpload('rc')}
-            loading={uploading === 'rc'}
-          />
-        </View>
+          <InfoCard label="IFSC" value={riderMe.bank_ifsc ?? '—'} />
+        </>
       ) : null}
-    </View>
-  );
-}
 
-function OnboardingForm({ onOnboarded }: { onOnboarded: () => void }) {
-  const [vehicleType, setVehicleType] = useState<VehicleType>('bike');
-  const [vehicleNumber, setVehicleNumber] = useState('');
-  const [vehicleModel, setVehicleModel] = useState('');
-  const [licenceNumber, setLicenceNumber] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  const handleSubmit = async () => {
-    if (!vehicleNumber.trim() || !vehicleModel.trim() || !licenceNumber.trim()) {
-      setError('Fill in all fields');
-      return;
-    }
-    setError(null);
-    setSubmitting(true);
-    try {
-      await onboardRider({
-        vehicle_type: vehicleType,
-        vehicle_number: vehicleNumber.trim(),
-        vehicle_model: vehicleModel.trim(),
-        licence_number: licenceNumber.trim(),
-      });
-      onOnboarded();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not submit. Try again.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <View style={styles.section}>
-      <Text style={styles.docLabel}>Become a rider</Text>
-
-      <View style={styles.vehicleRow}>
-        {VEHICLE_TYPES.map((type) => (
-          <Pressable
-            key={type}
-            style={[styles.vehicleChip, vehicleType === type && styles.vehicleChipSelected]}
-            onPress={() => setVehicleType(type)}
-          >
-            <Text style={[styles.vehicleChipLabel, vehicleType === type && styles.vehicleChipLabelSelected]}>
-              {type}
-            </Text>
-          </Pressable>
-        ))}
+      <View style={styles.docSection}>
+        <Text style={styles.docLabel}>Documents</Text>
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+        <Button
+          title="Upload licence"
+          variant="secondary"
+          onPress={() => handleUpload('licence')}
+          loading={uploading === 'licence'}
+        />
+        <Button
+          title="Upload RC"
+          variant="secondary"
+          onPress={() => handleUpload('rc')}
+          loading={uploading === 'rc'}
+        />
       </View>
-
-      <TextField label="Vehicle number" placeholder="DL1AB1234" value={vehicleNumber} onChangeText={setVehicleNumber} autoCapitalize="characters" />
-      <TextField label="Vehicle model" placeholder="Splendor" value={vehicleModel} onChangeText={setVehicleModel} />
-      <TextField label="Licence number" placeholder="DL-0420110149646" value={licenceNumber} onChangeText={setLicenceNumber} autoCapitalize="characters" />
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-
-      <Button title="Submit" onPress={handleSubmit} loading={submitting} />
     </View>
   );
 }
@@ -159,17 +125,4 @@ const styles = StyleSheet.create({
   docSection: { gap: spacing.md, marginTop: spacing.sm },
   docLabel: { ...typography.bodyStrong, color: colors.textPrimary },
   error: { ...typography.caption, color: colors.danger },
-  vehicleRow: { flexDirection: 'row', gap: spacing.sm },
-  vehicleChip: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-  },
-  vehicleChipSelected: { borderColor: colors.accent, backgroundColor: colors.accent },
-  vehicleChipLabel: { ...typography.bodyStrong, color: colors.primary, textTransform: 'capitalize' },
-  vehicleChipLabelSelected: { color: colors.textInverse },
 });

@@ -1,10 +1,14 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, Text, ScrollView, Pressable, Alert, Share, StyleSheet, ActivityIndicator } from 'react-native';
+import * as Location from 'expo-location';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { IconAlertTriangle, IconShare } from '@tabler/icons-react-native';
 import Button from '../../components/Button';
 import TextField from '../../components/TextField';
 import { useAppConfig } from '../../context/AppConfigContext';
-import { cancelBooking, getLiveBooking, rateBooking } from '../../services/customer';
+import { useBookingSocket } from '../../hooks/useBookingSocket';
+import { cancelBooking, getLiveBooking } from '../../services/customer';
+import { raiseAlert, shareTrip, stopSharingTrip } from '../../services/safety';
 import { ApiError } from '../../services/api';
 import { colors, radius, spacing, typography } from '../../theme';
 import { TERMINAL_BOOKING_STATUSES } from '../../types';
@@ -24,8 +28,6 @@ const STATUS_LABELS: Record<string, string> = {
   no_riders_found: 'No riders were available',
 };
 
-const POLL_MS = 5000;
-
 export default function TrackRideScreen({ route, navigation }: Props) {
   const { bookingId } = route.params;
   const { refresh } = useAppConfig();
@@ -33,40 +35,39 @@ export default function TrackRideScreen({ route, navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
-  const [rating, setRating] = useState<number | null>(null);
-  const [ratingSubmitted, setRatingSubmitted] = useState(false);
-  const [submittingRating, setSubmittingRating] = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [sosSending, setSosSending] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [shared, setShared] = useState(false);
 
-  const poll = useCallback(async () => {
+  const resync = useCallback(async () => {
     try {
       const data = await getLiveBooking(bookingId);
       setLive(data);
       setError(null);
-      if (TERMINAL_BOOKING_STATUSES.includes(data.status) && intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-        refresh();
+      if (data.status === 'completed') {
+        navigation.replace('RateRide', { bookingId });
+        return;
       }
+      if (TERMINAL_BOOKING_STATUSES.includes(data.status)) refresh();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not load ride status');
     }
-  }, [bookingId, refresh]);
+  }, [bookingId, refresh, navigation]);
 
   useEffect(() => {
-    poll();
-    intervalRef.current = setInterval(poll, POLL_MS);
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [poll]);
+    resync();
+  }, [resync]);
+
+  // Live status/location over WS /ws/bookings/{id} — falls back to a REST
+  // poll only while the socket can't hold a connection.
+  useBookingSocket(bookingId, () => resync(), { onResync: resync, onPoll: resync });
 
   const handleCancel = async () => {
     setCancelling(true);
     setError(null);
     try {
       await cancelBooking(bookingId, cancelReason.trim() || 'Changed my mind');
-      await poll();
+      await resync();
       refresh();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not cancel this ride');
@@ -75,22 +76,54 @@ export default function TrackRideScreen({ route, navigation }: Props) {
     }
   };
 
-  const handleRate = async () => {
-    if (!rating) return;
-    setSubmittingRating(true);
-    setError(null);
+  const handleSos = () => {
+    Alert.alert('Send an emergency alert?', 'This notifies your emergency contacts and Top Rider support.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Send SOS',
+        style: 'destructive',
+        onPress: async () => {
+          setSosSending(true);
+          try {
+            const pos = await Location.getCurrentPositionAsync({}).catch(() => null);
+            await raiseAlert({
+              booking_id: bookingId,
+              alert_type: 'sos',
+              lat: pos?.coords.latitude,
+              lng: pos?.coords.longitude,
+            });
+            Alert.alert('Help is on the way', 'Your emergency contacts have been notified.');
+          } catch {
+            Alert.alert('Could not send alert', 'Please call emergency services directly if you are in danger.');
+          } finally {
+            setSosSending(false);
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleShare = async () => {
+    setSharing(true);
     try {
-      await rateBooking(bookingId, rating);
-      setRatingSubmitted(true);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not submit rating');
+      if (shared) {
+        await stopSharingTrip(bookingId);
+        setShared(false);
+      } else {
+        const { url_path } = await shareTrip(bookingId);
+        setShared(true);
+        await Share.share({ message: `Follow my ride on Top Rider: ${url_path}` });
+      }
+    } catch {
+      // Best-effort — sharing failing shouldn't block the trip screen.
     } finally {
-      setSubmittingRating(false);
+      setSharing(false);
     }
   };
 
   const isTerminal = live ? TERMINAL_BOOKING_STATUSES.includes(live.status) : false;
   const canCancel = live ? !isTerminal : false;
+  const canShareOrSos = live ? !isTerminal && live.status !== 'requested' : false;
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
@@ -116,6 +149,19 @@ export default function TrackRideScreen({ route, navigation }: Props) {
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
+          {canShareOrSos ? (
+            <View style={styles.safetyRow}>
+              <Pressable style={styles.safetyButton} onPress={handleShare} disabled={sharing}>
+                <IconShare size={18} color={colors.primary} strokeWidth={1.75} />
+                <Text style={styles.safetyLabel}>{shared ? 'Stop sharing' : 'Share trip'}</Text>
+              </Pressable>
+              <Pressable style={[styles.safetyButton, styles.sosButton]} onPress={handleSos} disabled={sosSending}>
+                <IconAlertTriangle size={18} color={colors.danger} strokeWidth={1.75} />
+                <Text style={[styles.safetyLabel, styles.sosLabel]}>SOS</Text>
+              </Pressable>
+            </View>
+          ) : null}
+
           {canCancel ? (
             <View style={styles.cancelSection}>
               <TextField
@@ -125,20 +171,6 @@ export default function TrackRideScreen({ route, navigation }: Props) {
                 onChangeText={setCancelReason}
               />
               <Button title="Cancel ride" variant="secondary" onPress={handleCancel} loading={cancelling} />
-            </View>
-          ) : null}
-
-          {live.status === 'completed' && !ratingSubmitted ? (
-            <View style={styles.rateSection}>
-              <Text style={styles.rateLabel}>Rate your trip</Text>
-              <View style={styles.starsRow}>
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <Pressable key={n} onPress={() => setRating(n)} hitSlop={6}>
-                    <Text style={[styles.star, rating !== null && n <= rating ? styles.starFilled : null]}>★</Text>
-                  </Pressable>
-                ))}
-              </View>
-              <Button title="Submit rating" onPress={handleRate} loading={submittingRating} disabled={!rating} />
             </View>
           ) : null}
 
@@ -170,9 +202,20 @@ const styles = StyleSheet.create({
   location: { ...typography.caption, color: colors.accent },
   error: { ...typography.caption, color: colors.danger },
   cancelSection: { gap: spacing.md },
-  rateSection: { gap: spacing.md, alignItems: 'flex-start' },
-  rateLabel: { ...typography.bodyStrong, color: colors.textPrimary },
-  starsRow: { flexDirection: 'row', gap: spacing.sm },
-  star: { fontSize: 32, color: colors.border },
-  starFilled: { color: colors.accent },
+  safetyRow: { flexDirection: 'row', gap: spacing.md },
+  safetyButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+  },
+  sosButton: { borderColor: colors.danger },
+  safetyLabel: { ...typography.bodyStrong, color: colors.primary },
+  sosLabel: { color: colors.danger },
 });

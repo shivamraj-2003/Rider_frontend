@@ -8,6 +8,7 @@ import ScreenScaffold from '../../components/ScreenScaffold';
 import InfoCard from '../../components/InfoCard';
 import RideOfferModal from '../../components/RideOfferModal';
 import { useAppConfig } from '../../context/AppConfigContext';
+import { useRiderSocket } from '../../hooks/useRiderSocket';
 import { acceptOffer, getPendingOffers, getRiderMe, rejectOffer, sendLocationPing, setAvailability } from '../../services/rider';
 import { ApiError } from '../../services/api';
 import { colors, radius, spacing, typography } from '../../theme';
@@ -20,8 +21,10 @@ type Props = CompositeScreenProps<
 >;
 
 const LOCATION_PING_MS = 7000;
-const OFFER_POLL_MS = 4000;
+const OFFER_POLL_FALLBACK_MS = 5000;
 
+// RiderNavigator's gate already guarantees `status === 'approved'` before
+// this screen ever mounts (§ Become a Rider flow) — no need to re-check here.
 export default function AvailabilityScreen({ navigation }: Props) {
   const { activeTrip, refresh } = useAppConfig();
   const [riderMe, setRiderMe] = useState<RiderMe | null>(null);
@@ -33,7 +36,6 @@ export default function AvailabilityScreen({ navigation }: Props) {
   const [accepting, setAccepting] = useState(false);
 
   const pingInterval = useRef<ReturnType<typeof setInterval> | null>(null);
-  const offerPollInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     getRiderMe()
@@ -56,13 +58,6 @@ export default function AvailabilityScreen({ navigation }: Props) {
     }
   }, []);
 
-  const stopOfferPolling = useCallback(() => {
-    if (offerPollInterval.current) {
-      clearInterval(offerPollInterval.current);
-      offerPollInterval.current = null;
-    }
-  }, []);
-
   const startPings = useCallback(() => {
     stopPings();
     pingInterval.current = setInterval(async () => {
@@ -76,28 +71,29 @@ export default function AvailabilityScreen({ navigation }: Props) {
     }, LOCATION_PING_MS);
   }, [stopPings]);
 
-  const startOfferPolling = useCallback(() => {
-    stopOfferPolling();
-    offerPollInterval.current = setInterval(async () => {
-      try {
-        const offers = await getPendingOffers();
-        setOffer((current) => current ?? offers[0] ?? null);
-      } catch {
-        // Ignore transient failures — next poll retries.
-      }
-    }, OFFER_POLL_MS);
-  }, [stopOfferPolling]);
-
   useEffect(() => stopPings, [stopPings]);
-  useEffect(() => stopOfferPolling, [stopOfferPolling]);
 
-  // Trip takes priority — stop hunting for offers once assigned one.
-  useEffect(() => {
-    if (activeTrip) {
-      stopOfferPolling();
-      setOffer(null);
+  // Live offers over WS /ws/riders/me while online; REST poll only kicks in
+  // as the hook's own fallback if the socket can't hold a connection.
+  const pollOffers = useCallback(async () => {
+    try {
+      const offers = await getPendingOffers();
+      setOffer((current) => current ?? offers[0] ?? null);
+    } catch {
+      // Ignore transient failures — the next tick retries.
     }
-  }, [activeTrip, stopOfferPolling]);
+  }, []);
+
+  useRiderSocket(
+    isOnline && !activeTrip,
+    (e) => setOffer((current) => current ?? { ...e }),
+    { onResync: pollOffers, onPoll: pollOffers, pollMs: OFFER_POLL_FALLBACK_MS }
+  );
+
+  // Trip takes priority — stop showing offers once assigned one.
+  useEffect(() => {
+    if (activeTrip) setOffer(null);
+  }, [activeTrip]);
 
   const handleToggle = async (next: boolean) => {
     setError(null);
@@ -114,12 +110,10 @@ export default function AvailabilityScreen({ navigation }: Props) {
         await setAvailability('online', pos.coords.latitude, pos.coords.longitude);
         setIsOnline(true);
         startPings();
-        startOfferPolling();
       } else {
         await setAvailability('offline');
         setIsOnline(false);
         stopPings();
-        stopOfferPolling();
         setOffer(null);
       }
     } catch (err) {
@@ -135,7 +129,6 @@ export default function AvailabilityScreen({ navigation }: Props) {
     try {
       const booking = await acceptOffer(offer.booking_id);
       setOffer(null);
-      stopOfferPolling();
       refresh();
       navigation.navigate('RiderTrip', { bookingId: booking.id });
     } catch {
@@ -157,38 +150,10 @@ export default function AvailabilityScreen({ navigation }: Props) {
     }
   };
 
-  if (loadingProfile) {
+  if (loadingProfile || !riderMe) {
     return (
       <ScreenScaffold title="Rider Home">
         <ActivityIndicator color={colors.primary} />
-      </ScreenScaffold>
-    );
-  }
-
-  if (!riderMe) {
-    return (
-      <ScreenScaffold title="Rider Home" subtitle="Finish setting up your rider profile">
-        <View style={styles.noticeCard}>
-          <Text style={styles.noticeText}>
-            You haven't onboarded as a rider yet. Go to the Profile tab to add your vehicle
-            details and documents.
-          </Text>
-        </View>
-      </ScreenScaffold>
-    );
-  }
-
-  if (riderMe.status !== 'approved') {
-    const messages: Record<string, string> = {
-      pending_verification: 'Your documents are under review. You will be able to go online once approved.',
-      suspended: 'Your account is suspended. Contact support for help.',
-      rejected: 'Your application was rejected. Contact support for details.',
-    };
-    return (
-      <ScreenScaffold title="Rider Home" subtitle="Account status">
-        <View style={styles.noticeCard}>
-          <Text style={styles.noticeText}>{messages[riderMe.status] ?? riderMe.status}</Text>
-        </View>
       </ScreenScaffold>
     );
   }
@@ -200,7 +165,7 @@ export default function AvailabilityScreen({ navigation }: Props) {
         <Switch value={isOnline} onValueChange={handleToggle} disabled={toggling} />
       </View>
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <InfoCard label="Vehicle" value={`${riderMe.vehicle_type} · ${riderMe.vehicle_number}`} />
+      <InfoCard label="Vehicle" value={`${riderMe.vehicle_type} · ${riderMe.vehicle_number ?? '—'}`} />
       <InfoCard label="Rating" value={riderMe.rating != null ? riderMe.rating.toFixed(1) : '—'} />
 
       <RideOfferModal
@@ -227,12 +192,4 @@ const styles = StyleSheet.create({
   },
   toggleLabel: { ...typography.bodyStrong, color: colors.textPrimary },
   error: { ...typography.caption, color: colors.danger },
-  noticeCard: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-  },
-  noticeText: { ...typography.body, color: colors.textPrimary },
 });

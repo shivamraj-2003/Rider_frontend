@@ -2,6 +2,16 @@
 // Enums and shapes mirror Rider_backend's FRONTEND_INTEGRATION.md verbatim —
 // keep this file in sync with that guide, not the other way around.
 
+import { IconCar, IconMotorbike, IconScooter, type Icon } from '@tabler/icons-react-native';
+
+// GET /bookings and other paginated list endpoints — mirrors app/schemas/common.py Page.
+export interface Page<T> {
+  items: T[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export type UserRole = 'customer' | 'rider' | 'admin';
 
 export type BookingStatus =
@@ -85,17 +95,30 @@ export interface RouteGeometry {
 // `route_geometry` and `reference` are documented on the ride-offer / shared-trip
 // payloads (§5, §8); they are treated as optional on this shape since the guide
 // does not spell them out on every BookingOut response.
+// Mirrors BookingOut exactly (Rider_backend app/schemas/booking.py) — there is
+// no `fare` field on the wire, only `quoted_fare`/`final_fare`.
 export interface BookingOut {
   id: string;
+  reference: string;
   status: BookingStatus;
+  customer_id: string;
+  rider_id: string | null;
   vehicle_type: VehicleType;
+  pickup_lat: number;
+  pickup_lng: number;
+  pickup_address: string | null;
+  drop_lat: number;
+  drop_lng: number;
+  drop_address: string | null;
+  quoted_fare: number | null;
+  final_fare: number | null;
+  route_geometry: RouteGeometry | null;
+  route_source: string | null;
   payment_method: PaymentMethod;
-  pickup_address: string;
-  drop_address: string;
-  fare: number | null;
+  assigned_at: string | null;
+  started_at: string | null;
+  completed_at: string | null;
   created_at: string;
-  reference?: string;
-  route_geometry?: RouteGeometry | null;
 }
 
 // GET /places/search, GET /places/reverse, GET /places/saved
@@ -132,11 +155,10 @@ export interface FareQuote extends FareEstimate {
 
 // UI copy for each server vehicle_type. Screens render only the types /config
 // returns, so a new server-side type just needs a row added here.
-// TODO(phase-2): swap `glyph` text for real vehicle artwork.
-export const VEHICLE_META: Record<VehicleType, { label: string; glyph: string; seats: string }> = {
-  bike: { label: 'Bike', glyph: 'BIKE', seats: '1 seat' },
-  auto: { label: 'Auto', glyph: 'AUTO', seats: '3 seats' },
-  car: { label: 'Car', glyph: 'CAR', seats: '4 seats · AC' },
+export const VEHICLE_META: Record<VehicleType, { label: string; icon: Icon; seats: string }> = {
+  bike: { label: 'Bike', icon: IconMotorbike, seats: '1 seat' },
+  auto: { label: 'Auto', icon: IconScooter, seats: '3 seats' },
+  car: { label: 'Car', icon: IconCar, seats: '4 seats · AC' },
 };
 
 // ₹ formatter — rounds to whole rupees for display.
@@ -157,16 +179,19 @@ export interface BookingLive {
   updated_at: string;
 }
 
-// GET /riders/me
+// GET /riders/me — mirrors RiderOut exactly (Rider_backend app/schemas/rider.py).
 export interface RiderMe {
   id: string;
+  user_id: string;
   status: RiderStatus;
   availability: RiderAvailability;
   vehicle_type: VehicleType;
-  vehicle_number: string;
-  vehicle_model: string;
-  licence_number: string;
+  vehicle_number: string | null;
+  total_trips: number;
   rating: number | null;
+  bank_account_holder: string | null;
+  bank_account_number: string | null;
+  bank_ifsc: string | null;
 }
 
 // GET /riders/offers, and the WS `ride_offer` event payload

@@ -4,8 +4,10 @@ import { api } from './api';
 import type {
   BookingLive,
   BookingOut,
+  BookingStatus,
   FareEstimate,
   FareQuote,
+  Page,
   PaymentMethod,
   Place,
   SavedPlace,
@@ -84,4 +86,14 @@ export function cancelBooking(bookingId: string, reason: string) {
 
 export function rateBooking(bookingId: string, rating: number) {
   return api.post<void>(`/bookings/${bookingId}/rate`, { rating });
+}
+
+// GET /bookings — Ride History (§ Remaining customer screens).
+export function getBookings(opts: { limit?: number; offset?: number; status?: BookingStatus } = {}) {
+  const params = new URLSearchParams();
+  if (opts.limit != null) params.set('limit', String(opts.limit));
+  if (opts.offset != null) params.set('offset', String(opts.offset));
+  if (opts.status) params.set('status', opts.status);
+  const qs = params.toString();
+  return api.get<Page<BookingOut>>(`/bookings${qs ? `?${qs}` : ''}`);
 }

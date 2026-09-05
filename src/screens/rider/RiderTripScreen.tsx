@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Button from '../../components/Button';
 import TextField from '../../components/TextField';
 import { useAppConfig } from '../../context/AppConfigContext';
+import { useBookingSocket } from '../../hooks/useBookingSocket';
 import { getBooking } from '../../services/customer';
 import { collectCash, completeTrip, markArrived, startTrip } from '../../services/rider';
 import { ApiError } from '../../services/api';
@@ -14,8 +15,6 @@ import type { RiderStackParamList } from '../../navigation/RiderNavigator';
 
 type Props = NativeStackScreenProps<RiderStackParamList, 'RiderTrip'>;
 
-const POLL_MS = 5000;
-
 export default function RiderTripScreen({ route, navigation }: Props) {
   const { bookingId } = route.params;
   const { refresh } = useAppConfig();
@@ -25,37 +24,33 @@ export default function RiderTripScreen({ route, navigation }: Props) {
   const [distanceKm, setDistanceKm] = useState('');
   const [durationMin, setDurationMin] = useState('');
   const [cashCollected, setCashCollected] = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const poll = useCallback(async () => {
+  const resync = useCallback(async () => {
     try {
       const data = await getBooking(bookingId);
       setBooking(data);
       setError(null);
-      if (TERMINAL_BOOKING_STATUSES.includes(data.status) && intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-        refresh();
-      }
+      if (TERMINAL_BOOKING_STATUSES.includes(data.status)) refresh();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not load trip status');
     }
   }, [bookingId, refresh]);
 
   useEffect(() => {
-    poll();
-    intervalRef.current = setInterval(poll, POLL_MS);
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [poll]);
+    resync();
+  }, [resync]);
+
+  // Live status over WS /ws/bookings/{id} — a cancellation from the customer's
+  // side (rider_arrived/trip_started don't apply here since the rider caused
+  // those) still needs a re-fetch to pick up the terminal status.
+  useBookingSocket(bookingId, () => resync(), { onResync: resync, onPoll: resync });
 
   const handleArrived = async () => {
     setActing(true);
     setError(null);
     try {
       await markArrived(bookingId);
-      await poll();
+      await resync();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not update trip');
     } finally {
@@ -68,7 +63,7 @@ export default function RiderTripScreen({ route, navigation }: Props) {
     setError(null);
     try {
       await startTrip(bookingId);
-      await poll();
+      await resync();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not start trip');
     } finally {
@@ -87,7 +82,7 @@ export default function RiderTripScreen({ route, navigation }: Props) {
     setError(null);
     try {
       await completeTrip(bookingId, distance, duration);
-      await poll();
+      await resync();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not complete trip');
     } finally {
@@ -131,7 +126,7 @@ export default function RiderTripScreen({ route, navigation }: Props) {
 
       <View style={styles.statusCard}>
         <Text style={styles.statusText}>{booking.status.replace(/_/g, ' ')}</Text>
-        {booking.fare != null ? <Text style={styles.fare}>₹{booking.fare.toFixed(0)}</Text> : null}
+        {booking.final_fare != null ? <Text style={styles.fare}>₹{booking.final_fare.toFixed(0)}</Text> : null}
       </View>
 
       <View style={styles.addressBlock}>

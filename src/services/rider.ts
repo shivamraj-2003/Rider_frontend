@@ -14,8 +14,11 @@ import type {
 export interface OnboardRiderRequest {
   vehicle_type: VehicleType;
   vehicle_number: string;
-  vehicle_model: string;
+  vehicle_model?: string;
   licence_number: string;
+  bank_account_holder?: string;
+  bank_account_number?: string;
+  bank_ifsc?: string;
 }
 
 export function onboardRider(payload: OnboardRiderRequest) {

@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
+import { IconHistory, IconHome, IconUserCircle } from '@tabler/icons-react-native';
 import CustomerHomeScreen from '../screens/customer/CustomerHomeScreen';
 import RideHistoryScreen from '../screens/customer/RideHistoryScreen';
 import AccountScreen from '../screens/customer/AccountScreen';
@@ -12,9 +13,15 @@ import PaymentScreen from '../screens/customer/PaymentScreen';
 import SearchingRiderScreen from '../screens/customer/SearchingRiderScreen';
 import NoRidersFoundScreen from '../screens/customer/NoRidersFoundScreen';
 import TrackRideScreen from '../screens/customer/TrackRideScreen';
+import RateRideScreen from '../screens/customer/RateRideScreen';
+import SavedPlacesScreen from '../screens/customer/SavedPlacesScreen';
+import NotificationsScreen from '../screens/customer/NotificationsScreen';
+import EmergencyContactsScreen from '../screens/customer/EmergencyContactsScreen';
+import BecomeRiderNavigator from './BecomeRiderNavigator';
 import LocationPermissionScreen from '../screens/auth/LocationPermissionScreen';
 import SplashScreen from '../screens/auth/SplashScreen';
 import { LOCATION_PROMPT_DONE_KEY } from '../constants/storage';
+import { colors } from '../theme';
 import type { BookingOut, FareEstimate, Place } from '../types';
 
 export type CustomerStackParamList = {
@@ -25,6 +32,11 @@ export type CustomerStackParamList = {
   SearchingRider: { booking: BookingOut; pickup: Place; drop: Place };
   NoRidersFound: { bookingId: string; pickup: Place; drop: Place };
   TrackRide: { bookingId: string };
+  RateRide: { bookingId: string };
+  SavedPlaces: undefined;
+  Notifications: undefined;
+  EmergencyContacts: undefined;
+  BecomeRider: undefined;
 };
 
 export type CustomerTabParamList = {
@@ -38,10 +50,28 @@ const Stack = createNativeStackNavigator<CustomerStackParamList>();
 
 function CustomerTabs() {
   return (
-    <Tab.Navigator screenOptions={{ headerShown: false }}>
-      <Tab.Screen name="Book" component={CustomerHomeScreen} />
-      <Tab.Screen name="History" component={RideHistoryScreen} />
-      <Tab.Screen name="Account" component={AccountScreen} />
+    <Tab.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: colors.accent,
+        tabBarInactiveTintColor: colors.ink400,
+      }}
+    >
+      <Tab.Screen
+        name="Book"
+        component={CustomerHomeScreen}
+        options={{ tabBarIcon: ({ color, size }) => <IconHome color={color} size={size} /> }}
+      />
+      <Tab.Screen
+        name="History"
+        component={RideHistoryScreen}
+        options={{ tabBarIcon: ({ color, size }) => <IconHistory color={color} size={size} /> }}
+      />
+      <Tab.Screen
+        name="Account"
+        component={AccountScreen}
+        options={{ tabBarIcon: ({ color, size }) => <IconUserCircle color={color} size={size} /> }}
+      />
     </Tab.Navigator>
   );
 }
@@ -88,6 +118,11 @@ export default function CustomerNavigator() {
       <Stack.Screen name="SearchingRider" component={SearchingRiderScreen} />
       <Stack.Screen name="NoRidersFound" component={NoRidersFoundScreen} />
       <Stack.Screen name="TrackRide" component={TrackRideScreen} />
+      <Stack.Screen name="RateRide" component={RateRideScreen} />
+      <Stack.Screen name="SavedPlaces" component={SavedPlacesScreen} />
+      <Stack.Screen name="Notifications" component={NotificationsScreen} />
+      <Stack.Screen name="EmergencyContacts" component={EmergencyContactsScreen} />
+      <Stack.Screen name="BecomeRider" component={BecomeRiderNavigator} />
     </Stack.Navigator>
   );
 }

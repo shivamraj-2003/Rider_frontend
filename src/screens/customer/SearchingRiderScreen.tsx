@@ -85,6 +85,14 @@ export default function SearchingRiderScreen({ navigation, route }: Props) {
             await cancelBooking(booking.id, 'Changed my mind');
             navigation.navigate('Tabs');
           } catch (err) {
+            // The search can resolve (rider found, or no riders found) in the gap
+            // between tapping Cancel and the request landing - a 409 here almost
+            // always means the booking already moved on, not a real failure.
+            if (err instanceof ApiError && err.status === 409) {
+              await resync();
+              setCancelling(false);
+              return;
+            }
             setCancelling(false);
             Alert.alert(
               'Could not cancel',
@@ -99,7 +107,7 @@ export default function SearchingRiderScreen({ navigation, route }: Props) {
   const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1.9] });
   const opacity = pulse.interpolate({ inputRange: [0, 0.7, 1], outputRange: [0.5, 0, 0] });
   const meta = VEHICLE_META[booking.vehicle_type];
-  const fareText = booking.fare != null ? `${rupees(booking.fare)} · ` : '';
+  const fareText = booking.quoted_fare != null ? `${rupees(booking.quoted_fare)} · ` : '';
 
   return (
     <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom + 24 }]}>
@@ -108,7 +116,7 @@ export default function SearchingRiderScreen({ navigation, route }: Props) {
           <Animated.View style={[styles.pulse, { transform: [{ scale }], opacity }]} />
           <View style={styles.ring} />
           <View style={styles.badge}>
-            <Text style={styles.badgeLabel}>{meta.glyph}</Text>
+            <meta.icon size={28} color={colors.white} strokeWidth={1.75} />
           </View>
         </View>
 
@@ -176,7 +184,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  badgeLabel: { fontFamily: font.extrabold, fontSize: 15, letterSpacing: 0.8, color: colors.white },
   copy: { alignItems: 'center', gap: 10 },
   title: { fontFamily: font.extrabold, fontSize: 24, letterSpacing: -0.3, color: colors.white },
   sub: { fontFamily: font.regular, fontSize: 15, color: 'rgba(255,255,255,0.62)' },

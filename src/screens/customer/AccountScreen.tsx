@@ -8,9 +8,9 @@ export default function AccountScreen() {
 
   return (
     <ScreenScaffold title="Account">
-      <InfoCard label="Name" value={user?.name ?? '—'} />
+      <InfoCard label="Name" value={user?.full_name ?? '—'} />
       <InfoCard label="Phone" value={user?.phone ?? '—'} />
-      <InfoCard label="Verified" value={user?.isVerified ? 'Yes' : 'No'} />
+      <InfoCard label="Email" value={user?.email ?? '—'} />
     </ScreenScaffold>
   );
 }

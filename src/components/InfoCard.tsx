@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { colors, radius, spacing, typography } from '../theme';
 
 export default function InfoCard({ label, value }: { label: string; value: string }) {
   return (
@@ -13,11 +14,11 @@ export default function InfoCard({ label, value }: { label: string; value: strin
 const styles = StyleSheet.create({
   card: {
     borderWidth: 1,
-    borderColor: '#e2e2e2',
-    borderRadius: 10,
-    padding: 14,
-    backgroundColor: '#fff',
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+    backgroundColor: colors.surface,
   },
-  label: { fontSize: 12, color: '#888' },
-  value: { fontSize: 16, fontWeight: '600', marginTop: 4 },
+  label: { ...typography.label, color: colors.textSecondary },
+  value: { ...typography.h3, color: colors.textPrimary, marginTop: 4 },
 });

@@ -1,49 +1,179 @@
 // Core domain types shared across the app.
-// Mirrors the requirements in the Developer Technical Partner & Equity Agreement.
+// Enums and shapes mirror Rider_backend's FRONTEND_INTEGRATION.md verbatim —
+// keep this file in sync with that guide, not the other way around.
 
 export type UserRole = 'customer' | 'rider' | 'admin';
 
-export interface AuthUser {
-  id: string;
-  name: string;
-  phone: string;
-  role: UserRole;
-  isVerified: boolean;
-}
-
-export type TripStatus =
+export type BookingStatus =
   | 'requested'
-  | 'accepted'
-  | 'arriving'
+  | 'assigned'
+  | 'arrived'
   | 'in_progress'
   | 'completed'
-  | 'cancelled';
+  | 'cancelled_by_customer'
+  | 'cancelled_by_rider'
+  | 'no_riders_found';
+
+export const TERMINAL_BOOKING_STATUSES: BookingStatus[] = [
+  'completed',
+  'cancelled_by_customer',
+  'cancelled_by_rider',
+  'no_riders_found',
+];
+
+export type RiderStatus = 'pending_verification' | 'approved' | 'suspended' | 'rejected';
+export type RiderAvailability = 'offline' | 'online' | 'on_trip';
+export type VehicleType = 'bike' | 'auto' | 'car';
+export type PaymentMethod = 'cash' | 'online' | 'wallet';
+export type PaymentStatus = 'pending' | 'authorized' | 'paid' | 'failed' | 'refunded';
+export type SafetyAlertType = 'sos' | 'prolonged_stop' | 'route_deviation' | 'overspeed';
+
+// POST /auth/verify-otp -> user, and GET /auth/me
+export interface UserOut {
+  id: string;
+  role: UserRole;
+  phone: string;
+  full_name: string | null;
+  email: string | null;
+  avatar_url: string | null;
+  is_active: boolean;
+}
+
+// POST /auth/verify-otp and POST /auth/refresh response shape
+export interface Session {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
+  expires_at: string;
+  user: UserOut;
+  is_new_user: boolean;
+  profile_complete: boolean;
+}
+
+// GET /config
+export interface AppConfig {
+  role: UserRole;
+  maps_enabled: boolean;
+  payments_enabled: boolean;
+  mapbox_public_token: string | null;
+  mapbox_style_url: string | null;
+  vehicle_types: VehicleType[];
+  currency: string;
+  settings: {
+    booking_enabled: boolean;
+    support_phone: string | null;
+    min_app_version: string | null;
+  };
+}
 
 export interface LatLng {
   latitude: number;
   longitude: number;
 }
 
-export interface Trip {
+// BookingOut — the fields used by the booking/tracking flow so far
+// (crash-resume banner, creation response, /bookings/current). `route_geometry`
+// is left out until the map is wired in Phase 7.
+export interface BookingOut {
   id: string;
-  customerId: string;
-  riderId: string | null;
-  status: TripStatus;
-  pickup: LatLng & { address: string };
-  destination: LatLng & { address: string };
-  fare: number;
-  companyCommission: number;
-  riderEarning: number;
-  requestedAt: string;
-  completedAt: string | null;
+  status: BookingStatus;
+  vehicle_type: VehicleType;
+  payment_method: PaymentMethod;
+  pickup_address: string;
+  drop_address: string;
+  fare: number | null;
+  created_at: string;
 }
 
-export interface RiderProfile {
-  id: string;
+// GET /places/search, GET /places/reverse, GET /places/saved
+export interface Place {
+  place_id: string;
   name: string;
-  phone: string;
-  isAvailable: boolean;
-  currentLocation: LatLng | null;
-  vehicleNumber: string;
-  rating: number;
+  address: string;
+  lat: number;
+  lng: number;
+}
+
+// GET /places/saved rows carry a label ("Home"/"Work"/custom) on top of Place.
+export interface SavedPlace extends Place {
+  id: string;
+  label: string;
+}
+
+// POST /bookings/estimates — one row per vehicle type
+export interface FareEstimate {
+  vehicle_type: VehicleType;
+  fare: number;
+  distance_km: number;
+  duration_min: number;
+  surge_multiplier: number;
+}
+
+// GET /bookings/{id}/live
+export interface BookingLive {
+  booking_id: string;
+  status: BookingStatus;
+  rider_location: {
+    lat: number;
+    lng: number;
+    speed_kmph: number;
+    heading: number;
+    recorded_at: string;
+  } | null;
+  eta_minutes: number | null;
+  updated_at: string;
+}
+
+// GET /riders/me
+export interface RiderMe {
+  id: string;
+  status: RiderStatus;
+  availability: RiderAvailability;
+  vehicle_type: VehicleType;
+  vehicle_number: string;
+  vehicle_model: string;
+  licence_number: string;
+  rating: number | null;
+}
+
+// GET /riders/offers, and the WS `ride_offer` event payload
+export interface RideOffer {
+  booking_id: string;
+  reference: string;
+  pickup: { lat: number; lng: number; address: string };
+  drop: { lat: number; lng: number; address: string };
+  fare: number;
+  distance_to_pickup_km: number;
+  expires_in: number;
+}
+
+// GET /riders/me/stats
+export interface RiderStats {
+  trips_today: number;
+  earnings_today: number;
+  total_trips: number;
+  cancelled_trips: number;
+  rating: number | null;
+  acceptance_rate: number;
+}
+
+// GET /earnings/summary
+export interface EarningsSummary {
+  today: number;
+  this_week: number;
+  this_month: number;
+  lifetime: number;
+  pending_settlement: number;
+  trips_today: number;
+}
+
+// GET /earnings — per-trip ledger row
+export interface EarningsEntry {
+  booking_id: string;
+  gross_fare: number;
+  commission: number;
+  net_earning: number;
+  settlement_status: string;
+  created_at: string;
 }

@@ -1,50 +1,88 @@
-import React, { createContext, useContext, useMemo, useState, PropsWithChildren } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { AuthUser, UserRole } from '../types';
+import React, { createContext, useContext, useEffect, useMemo, useState, PropsWithChildren } from 'react';
+import { api, ApiError, setOnSignedOut, tokenStore } from '../services/api';
+import type { Session, UserOut } from '../types';
+
+type AuthStatus = 'loading' | 'signed-out' | 'needs-profile' | 'signed-in';
 
 interface AuthContextValue {
-  user: AuthUser | null;
-  isLoading: boolean;
-  // Placeholder sign-in: swap for a real API call to the backend later.
-  signIn: (user: AuthUser) => Promise<void>;
+  status: AuthStatus;
+  user: UserOut | null;
+  sendOtp: (phone: string) => Promise<{ expires_in: number; resend_in: number }>;
+  verifyOtp: (phone: string, code: string) => Promise<Session>;
+  completeProfile: (full_name: string, email?: string) => Promise<void>;
   signOut: () => Promise<void>;
-  switchRole: (role: UserRole) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const STORAGE_KEY = '@rider_app/auth_user';
-
 export function AuthProvider({ children }: PropsWithChildren) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [status, setStatus] = useState<AuthStatus>('loading');
+  const [user, setUser] = useState<UserOut | null>(null);
 
-  React.useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY)
-      .then((raw) => {
-        if (raw) setUser(JSON.parse(raw));
-      })
-      .finally(() => setIsLoading(false));
+  const applySession = (session: Session) => {
+    setUser(session.user);
+    setStatus(session.profile_complete ? 'signed-in' : 'needs-profile');
+  };
+
+  useEffect(() => {
+    setOnSignedOut(() => {
+      setUser(null);
+      setStatus('signed-out');
+    });
+
+    (async () => {
+      const refreshToken = await tokenStore.getRefreshToken();
+      if (!refreshToken) {
+        setStatus('signed-out');
+        return;
+      }
+      // Trade the refresh token in immediately on cold start: it proves the
+      // session is still alive and gives a fresh access token, so the first
+      // real screen never starts with a 401 (FRONTEND_INTEGRATION.md §3).
+      try {
+        const session = await api.post<Session>('/auth/refresh', { refresh_token: refreshToken });
+        await tokenStore.save(session);
+        applySession(session);
+      } catch {
+        await tokenStore.clear();
+        setStatus('signed-out');
+      }
+    })();
   }, []);
 
-  const signIn = async (nextUser: AuthUser) => {
-    setUser(nextUser);
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser));
+  const sendOtp = async (phone: string) => api.post<{ expires_in: number; resend_in: number }>('/auth/send-otp', { phone });
+
+  const verifyOtp = async (phone: string, code: string) => {
+    const session = await api.post<Session>('/auth/verify-otp', { phone, code });
+    await tokenStore.save(session);
+    applySession(session);
+    return session;
+  };
+
+  const completeProfile = async (full_name: string, email?: string) => {
+    const updated = await api.post<UserOut>('/auth/complete-profile', {
+      full_name,
+      ...(email ? { email } : {}),
+    });
+    setUser(updated);
+    setStatus('signed-in');
   };
 
   const signOut = async () => {
+    const refresh_token = await tokenStore.getRefreshToken();
+    try {
+      if (refresh_token) await api.post('/auth/logout', { refresh_token });
+    } catch {
+      // Best-effort — the local session is cleared either way.
+    }
+    await tokenStore.clear();
     setUser(null);
-    await AsyncStorage.removeItem(STORAGE_KEY);
-  };
-
-  // Dev convenience only, so you can preview each role's UI without a backend yet.
-  const switchRole = (role: UserRole) => {
-    setUser((prev) => (prev ? { ...prev, role } : prev));
+    setStatus('signed-out');
   };
 
   const value = useMemo(
-    () => ({ user, isLoading, signIn, signOut, switchRole }),
-    [user, isLoading]
+    () => ({ status, user, sendOtp, verifyOtp, completeProfile, signOut }),
+    [status, user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -55,3 +93,5 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be used within an AuthProvider');
   return ctx;
 }
+
+export { ApiError };

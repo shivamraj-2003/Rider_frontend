@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Rider_frontend",
+    "name": "Top Rider",
     "slug": "Rider_frontend",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -11,7 +11,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0B1F3A",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -20,6 +20,21 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Top Rider uses your location to match you with nearby riders and to share your live position while you're online."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Top Rider needs access to your photos to upload your licence and vehicle documents."
+        }
+      ]
+    ]
   }
 }

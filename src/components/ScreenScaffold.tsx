@@ -1,6 +1,7 @@
 import React, { PropsWithChildren } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { colors, spacing, typography } from '../theme';
 
 interface Props {
   title: string;
@@ -13,13 +14,13 @@ export default function ScreenScaffold({ title, subtitle, children }: PropsWithC
   const { user, signOut } = useAuth();
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>{title}</Text>
           {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
         </View>
-        <Pressable onPress={signOut}>
+        <Pressable onPress={signOut} hitSlop={8}>
           <Text style={styles.signOut}>Sign out ({user?.role})</Text>
         </Pressable>
       </View>
@@ -29,9 +30,10 @@ export default function ScreenScaffold({ title, subtitle, children }: PropsWithC
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, padding: 20, gap: 16 },
+  screen: { flex: 1, backgroundColor: colors.background },
+  container: { flexGrow: 1, padding: spacing.xl, gap: spacing.lg },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontSize: 24, fontWeight: '700' },
-  subtitle: { fontSize: 13, color: '#888', marginTop: 2 },
-  signOut: { fontSize: 12, color: '#c0392b' },
+  title: { ...typography.h2, color: colors.primary },
+  subtitle: { ...typography.caption, color: colors.textSecondary, marginTop: 2 },
+  signOut: { ...typography.caption, color: colors.danger },
 });

@@ -2,6 +2,7 @@ import React from 'react';
 import { FlatList, Text, StyleSheet } from 'react-native';
 import ScreenScaffold from '../../components/ScreenScaffold';
 import InfoCard from '../../components/InfoCard';
+import { colors, typography } from '../../theme';
 
 // Maps to Agreement section 3: booking and ride history.
 export default function RideHistoryScreen() {
@@ -21,5 +22,5 @@ export default function RideHistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  empty: { fontSize: 13, color: '#999' },
+  empty: { ...typography.caption, color: colors.textSecondary },
 });

@@ -47,7 +47,7 @@ export default function PhoneLoginScreen({ navigation }: Props) {
     >
       <View style={styles.container}>
         <View style={styles.brand}>
-          <Image source={require('../../../assets/icon.png')} style={styles.logo} />
+          <Image source={require('../../../assets/logo.jpeg')} style={styles.logo} />
           <Text style={styles.title}>Top Rider</Text>
           <Text style={styles.tagline}>Ride Safe. Reach Home.</Text>
         </View>

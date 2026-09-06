@@ -282,7 +282,16 @@ const styles = StyleSheet.create({
   },
   locDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent },
   locLabel: { fontFamily: font.bold, fontSize: 13, color: colors.navy800, flexShrink: 1 },
-  bottomGroup: { marginTop: 'auto' },
+  // Pinned to the bottom edge, not flex + marginTop:'auto' — the Sheet's
+  // full content (saved places, popular list...) can be taller than the
+  // visible space below topRow even though it's usually shown collapsed
+  // (collapsing is a visual transform, it doesn't shrink the layout box).
+  // With marginTop:'auto', that tall-but-collapsed box left no room to push
+  // itself down, so "Fast · Safe · Affordable" ended up rendered right
+  // under the top row instead of near the bottom. Anchoring to the bottom
+  // edge directly means its position never depends on how tall the sheet's
+  // full content happens to be.
+  bottomGroup: { position: 'absolute', left: 0, right: 0, bottom: 0 },
   fleetBanner: {
     flexDirection: 'row',
     alignItems: 'center',

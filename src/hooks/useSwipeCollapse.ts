@@ -1,46 +1,54 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, PanResponder } from 'react-native';
+import { Animated, Dimensions, PanResponder } from 'react-native';
 
-// Drag-down-to-peek for a bottom sheet that has nowhere to "go back" to
-// (the Home tab's "Where are you going?" sheet sits on the root screen, not
-// a pushed one) — dragging it down reveals more map instead of closing
-// anything, and it snaps back up on a tap or another drag. Needs the
-// sheet's own rendered height (from onLayout) to know how far "peek" is.
+type Snap = 'full' | 'half' | 'peek';
+
+// Drag-to-resize for a bottom sheet that has nowhere to "go back" to (the
+// Home tab's "Where are you going?" sheet sits on the root screen, not a
+// pushed one) — three snap points: fully expanded, half the screen, and
+// just the grab handle peeking. Needs the sheet's own rendered height (from
+// onLayout) to know where "half" and "peek" land.
 export function useSwipeCollapse(
   sheetHeight: number,
-  { peekVisible = 64, defaultCollapsed = false }: { peekVisible?: number; defaultCollapsed?: boolean } = {}
+  { peekVisible = 64, defaultSnap = 'half' }: { peekVisible?: number; defaultSnap?: Snap } = {}
 ) {
-  const maxTranslate = Math.max(0, sheetHeight - peekVisible);
+  const screenHeight = Dimensions.get('window').height;
+  const peekTranslate = Math.max(0, sheetHeight - peekVisible);
+  const halfTranslate = Math.max(0, Math.min(peekTranslate, sheetHeight - screenHeight * 0.5));
+  const offsets: Record<Snap, number> = { full: 0, half: halfTranslate, peek: peekTranslate };
+
   // PanResponder.create() only runs once (it's built inside useRef) — its
-  // callbacks close over whatever `maxTranslate` was on that FIRST render,
-  // which is 0 (sheetHeight isn't known until onLayout fires). Without this
-  // ref they'd stay frozen at "nothing to collapse", so a drag would never
-  // move the sheet at all no matter how tall it later measured. Keep the
-  // live value in a ref, updated every render, and read that inside the
-  // gesture instead of the closed-over parameter.
-  const maxTranslateRef = useRef(maxTranslate);
-  maxTranslateRef.current = maxTranslate;
+  // callbacks would otherwise close over whatever these offsets were on
+  // that FIRST render, which is all zeros (sheetHeight isn't known until
+  // onLayout fires). Keep the live values in a ref, updated every render,
+  // and read that inside the gesture instead of the closed-over object.
+  const offsetsRef = useRef(offsets);
+  offsetsRef.current = offsets;
 
-  const translateY = useRef(new Animated.Value(defaultCollapsed ? maxTranslate : 0)).current;
-  const collapsedRef = useRef(defaultCollapsed);
-  const [collapsed, setCollapsed] = useState(defaultCollapsed);
+  const translateY = useRef(new Animated.Value(offsets[defaultSnap])).current;
+  const snapRef = useRef<Snap>(defaultSnap);
+  const [snap, setSnap] = useState<Snap>(defaultSnap);
 
-  // Re-pin the collapsed position whenever the sheet's real height changes -
-  // covers both the very first onLayout (sheetHeight is 0 on mount, so the
-  // "collapsed" position above was a guess) and later content loading in
-  // (saved places / popular list) making the sheet taller. Without this, a
-  // rider/content update after mount could look like the sheet "auto
-  // expanded" simply because the collapsed offset never moved to match a
-  // now-taller sheet. Only touches the position while still collapsed - an
-  // expanded sheet is never nudged by a content change.
+  // Re-pin to the current snap's position whenever the sheet's real height
+  // (or the screen size) changes - covers both the very first onLayout
+  // (sheetHeight is 0 on mount, so the offsets above were a guess) and
+  // later content loading in (saved places / popular list) making the
+  // sheet taller. Without this, a rider/content update after mount could
+  // look like the sheet "auto expanded" simply because its offset never
+  // moved to match a now-taller sheet.
   useEffect(() => {
-    if (collapsedRef.current) translateY.setValue(maxTranslate);
-  }, [maxTranslate, translateY]);
+    translateY.setValue(offsets[snapRef.current]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [offsets.half, offsets.peek, translateY]);
 
-  const snapTo = (toValue: number, isCollapsed: boolean) => {
-    collapsedRef.current = isCollapsed;
-    setCollapsed(isCollapsed);
-    Animated.spring(translateY, { toValue, useNativeDriver: true, bounciness: 4 }).start();
+  const snapTo = (name: Snap) => {
+    snapRef.current = name;
+    setSnap(name);
+    Animated.spring(translateY, {
+      toValue: offsetsRef.current[name],
+      useNativeDriver: true,
+      bounciness: 4,
+    }).start();
   };
 
   const panResponder = useRef(
@@ -50,36 +58,57 @@ export function useSwipeCollapse(
       // scrollable under it, and a Pressable layered on top of PanResponder
       // here fought it for the responder and swallowed the whole gesture —
       // that's why dragging did nothing. Claiming immediately also lets a
-      // plain tap (see release, below) double as "expand".
+      // plain tap (see release, below) double as "go up one snap".
       onStartShouldSetPanResponder: () => true,
       onPanResponderMove: (_evt, g) => {
-        const max = maxTranslateRef.current;
-        const base = collapsedRef.current ? max : 0;
+        const o = offsetsRef.current;
+        const base = o[snapRef.current];
         const next = base + g.dy;
-        translateY.setValue(Math.max(0, Math.min(max, next)));
+        translateY.setValue(Math.max(o.full, Math.min(o.peek, next)));
       },
       onPanResponderRelease: (_evt, g) => {
-        const max = maxTranslateRef.current;
+        const o = offsetsRef.current;
         const isTap = Math.abs(g.dx) < 6 && Math.abs(g.dy) < 6;
+        const order: Snap[] = ['full', 'half', 'peek'];
+        const currentIndex = order.indexOf(snapRef.current);
         if (isTap) {
-          if (collapsedRef.current) snapTo(0, false); // tap the peeking handle to expand
+          // Tap the handle to open up one notch (peek -> half -> full).
+          if (currentIndex > 0) snapTo(order[currentIndex - 1]);
           return;
         }
-        const base = collapsedRef.current ? max : 0;
+        // A fast flick jumps one snap point in that direction regardless
+        // of exactly how far it moved; otherwise land on whichever of the
+        // three offsets the released position ended up closest to.
+        if (g.vy > 0.8 && currentIndex < order.length - 1) {
+          snapTo(order[currentIndex + 1]);
+          return;
+        }
+        if (g.vy < -0.8 && currentIndex > 0) {
+          snapTo(order[currentIndex - 1]);
+          return;
+        }
+        const base = o[snapRef.current];
         const projected = base + g.dy;
-        const shouldCollapse = projected > max / 2 || g.vy > 0.6;
-        snapTo(shouldCollapse ? max : 0, shouldCollapse);
+        let nearest: Snap = 'full';
+        let bestDist = Infinity;
+        for (const name of order) {
+          const dist = Math.abs(projected - o[name]);
+          if (dist < bestDist) {
+            bestDist = dist;
+            nearest = name;
+          }
+        }
+        snapTo(nearest);
       },
-      onPanResponderTerminate: () => {
-        snapTo(collapsedRef.current ? maxTranslateRef.current : 0, collapsedRef.current);
-      },
+      onPanResponderTerminate: () => snapTo(snapRef.current),
     })
   ).current;
 
   return {
-    panHandlers: maxTranslate > 0 ? panResponder.panHandlers : {},
+    panHandlers: offsets.peek > 0 ? panResponder.panHandlers : {},
     style: { transform: [{ translateY }] },
-    collapsed,
-    expand: () => snapTo(0, false),
+    snap,
+    collapsed: snap === 'peek',
+    expand: () => snapTo('full'),
   };
 }

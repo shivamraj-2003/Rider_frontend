@@ -41,10 +41,11 @@ export function Sheet({
   const usingPeek = !!peek && !onDismiss;
   const collapseGesture = useSwipeCollapse(height, {
     peekVisible: PEEK_VISIBLE_PX,
-    // Minimized by default (Rapido-style) — the map, rider markers and live
-    // tracking sit right behind it, so there's no reason to cover them
-    // until the rider actually asks to see the sheet.
-    defaultCollapsed: usingPeek,
+    // Half the screen by default (Rapido-style) — enough map is visible
+    // behind it right away, without hiding the sheet's content entirely
+    // the moment the screen loads. Drag it up to full or down to just the
+    // grab handle from there.
+    defaultSnap: 'half',
   });
 
   const panHandlers = onDismiss ? dismissGesture.panHandlers : usingPeek ? collapseGesture.panHandlers : {};

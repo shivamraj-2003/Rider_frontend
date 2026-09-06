@@ -22,11 +22,12 @@ interface Props {
   visible: boolean;
   busy?: boolean;
   warning?: string;
+  error?: string | null;
   onClose: () => void;
   onConfirm: (reason: string) => void;
 }
 
-export default function CancelRideSheet({ visible, busy, warning, onClose, onConfirm }: Props) {
+export default function CancelRideSheet({ visible, busy, warning, error, onClose, onConfirm }: Props) {
   const [reason, setReason] = useState<string | null>(null);
   const [custom, setCustom] = useState('');
 
@@ -80,6 +81,8 @@ export default function CancelRideSheet({ visible, busy, warning, onClose, onCon
           {isOther ? (
             <TextField placeholder="What happened?" value={custom} onChangeText={setCustom} autoFocus />
           ) : null}
+
+          {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <View style={styles.actions}>
             <Button title="Keep ride" variant="navy" onPress={handleClose} style={styles.actionBtn} />
@@ -142,6 +145,7 @@ const styles = StyleSheet.create({
   chipSelected: { borderColor: colors.accent, backgroundColor: colors.accentFaint },
   chipLabel: { fontFamily: font.semibold, fontSize: 13, color: colors.ink600 },
   chipLabelSelected: { color: colors.accentDark },
+  error: { fontFamily: font.medium, fontSize: 13, color: colors.danger },
   actions: { flexDirection: 'row', gap: 10, marginTop: 4 },
   actionBtn: { flex: 1 },
 });

@@ -39,6 +39,7 @@ export default function TrackRideScreen({ route, navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [cancelSheetOpen, setCancelSheetOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
   const [sosSending, setSosSending] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [shared, setShared] = useState(false);
@@ -71,14 +72,24 @@ export default function TrackRideScreen({ route, navigation }: Props) {
 
   const handleCancel = async (reason: string) => {
     setCancelling(true);
-    setError(null);
+    setCancelError(null);
     try {
       await cancelBooking(bookingId, reason);
       setCancelSheetOpen(false);
       await resync();
       refresh();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not cancel this ride');
+      // The ride can move on (rider arrives, trip starts) in the gap between
+      // opening this sheet and confirming — a 409 here almost always means
+      // that, not a real failure. Resync so the sheet's own guard against
+      // cancelling an in-progress trip (canCancel) picks up the new status,
+      // rather than showing a scary error for something that isn't one.
+      if (err instanceof ApiError && err.status === 409) {
+        setCancelSheetOpen(false);
+        await resync();
+        return;
+      }
+      setCancelError(err instanceof ApiError ? err.message : 'Could not cancel this ride');
     } finally {
       setCancelling(false);
     }
@@ -230,7 +241,14 @@ export default function TrackRideScreen({ route, navigation }: Props) {
           ) : null}
 
           {canCancel ? (
-            <Button title="Cancel ride" variant="secondary" onPress={() => setCancelSheetOpen(true)} />
+            <Button
+              title="Cancel ride"
+              variant="secondary"
+              onPress={() => {
+                setCancelError(null);
+                setCancelSheetOpen(true);
+              }}
+            />
           ) : null}
 
           {isTerminal ? (
@@ -246,6 +264,7 @@ export default function TrackRideScreen({ route, navigation }: Props) {
       <CancelRideSheet
         visible={cancelSheetOpen}
         busy={cancelling}
+        error={cancelError}
         warning={
           live?.status === 'assigned' || live?.status === 'arrived'
             ? 'A cancellation fee may apply since a rider is already on the way.'

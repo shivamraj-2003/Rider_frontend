@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -8,11 +9,12 @@ import * as Location from 'expo-location';
 import { IconBriefcase, IconChevronRight, IconHome, IconMapPin, IconStar } from '@tabler/icons-react-native';
 import { useAppConfig } from '../../context/AppConfigContext';
 import { getPopularPlaces, getSavedPlaces, reverseGeocode } from '../../services/customer';
+import { getNearbyRiders } from '../../services/rider';
 import { colors, font, radius, shadow } from '../../theme';
 import { Sheet, GlyphTile, PlaceRow } from '../../components/booking';
 import MapCanvas from '../../components/MapCanvas';
 import { VEHICLE_META } from '../../types';
-import type { Place, PopularPlace, SavedPlace } from '../../types';
+import type { NearbyRider, Place, PopularPlace, SavedPlace } from '../../types';
 import type { CustomerStackParamList, CustomerTabParamList } from '../../navigation/CustomerNavigator';
 
 // Home-screen convention: a saved place's own label picks its icon, falling
@@ -37,6 +39,7 @@ export default function CustomerHomeScreen({ navigation }: Props) {
   const [pickup, setPickup] = useState<Place | null>(null);
   const [saved, setSaved] = useState<SavedPlace[]>([]);
   const [popular, setPopular] = useState<PopularPlace[]>([]);
+  const [nearbyRiders, setNearbyRiders] = useState<NearbyRider[]>([]);
 
   useEffect(() => {
     if (activeBooking) {
@@ -56,6 +59,25 @@ export default function CustomerHomeScreen({ navigation }: Props) {
       .then(setPopular)
       .catch(() => setPopular([]));
   }, [pickup]);
+
+  // Real nearby-rider dots, refreshed while this screen is on screen — not a
+  // WebSocket topic (there's no per-viewer "area" channel to subscribe to
+  // pre-booking), but a cheap, focus-gated poll of just the marker data, not
+  // the map itself, so the map view never reloads.
+  const pollNearbyRiders = useCallback(() => {
+    if (!pickup) return;
+    getNearbyRiders(pickup.lat, pickup.lng)
+      .then(setNearbyRiders)
+      .catch(() => {});
+  }, [pickup]);
+
+  useFocusEffect(
+    useCallback(() => {
+      pollNearbyRiders();
+      const t = setInterval(pollNearbyRiders, 6000);
+      return () => clearInterval(t);
+    }, [pollNearbyRiders])
+  );
 
   useEffect(() => {
     (async () => {
@@ -94,6 +116,14 @@ export default function CustomerHomeScreen({ navigation }: Props) {
         center={pickup}
         pickup={pickup}
         pickupLabel={pickup?.name}
+        nearby={nearbyRiders.map((r) => ({
+          id: r.rider_id,
+          lat: r.lat,
+          lng: r.lng,
+          heading: r.heading,
+          distanceKm: r.distance_km,
+          vehicleType: r.vehicle_type,
+        }))}
       />
 
       <View style={[styles.topRow, { paddingTop: insets.top + 8 }]}>

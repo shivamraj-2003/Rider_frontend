@@ -1,7 +1,9 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { colors, font } from '../theme';
-import type { MapCanvasProps } from './mapCanvasTypes';
+import React, { useState } from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { colors, font, radius, shadow } from '../theme';
+import { VEHICLE_META } from '../types';
+import RiderVehicleMarker from './RiderVehicleMarker';
+import type { MapCanvasProps, NearbyRiderMarker } from './mapCanvasTypes';
 
 // -----------------------------------------------------------------------------
 // PLACEHOLDER MAP — the only one Expo Go can run (no native module). MapCanvas.tsx
@@ -18,12 +20,35 @@ function shortLabel(label?: string | null): string | null {
   return label.split(',')[0].trim() || null;
 }
 
-export default function MapCanvasPlaceholder({ pickup, pickupLabel, drop, dropLabel, riderLocation, dim }: MapCanvasProps) {
+// This view has no real map projection - nearby riders are scattered around
+// the centre by their actual lat/lng delta (scaled up arbitrarily, since
+// there's no true ground distance to map to pixels here), so several riders
+// don't all pile on the same spot and their rough relative position/spread
+// still means something.
+function offsetFor(rider: NearbyRiderMarker, anchor: { lat: number; lng: number }) {
+  const dx = (rider.lng - anchor.lng) * 4000;
+  const dy = (anchor.lat - rider.lat) * 4000;
+  const clamp = (n: number) => Math.max(-130, Math.min(130, n));
+  return { x: clamp(dx), y: clamp(dy) };
+}
+
+export default function MapCanvasPlaceholder({
+  pickup,
+  pickupLabel,
+  drop,
+  dropLabel,
+  riderLocation,
+  nearby,
+  dim,
+}: MapCanvasProps) {
+  const [selected, setSelected] = useState<NearbyRiderMarker | null>(null);
+  const anchor = pickup ?? riderLocation ?? nearby?.[0] ?? null;
+
   return (
-    <View style={styles.fill} pointerEvents="none">
-      <View style={styles.base} />
+    <View style={styles.fill} pointerEvents="box-none">
+      <View style={styles.base} pointerEvents="none" />
       {/* Faint grid so it reads as a map surface, not a blank panel. */}
-      <View style={styles.grid}>
+      <View style={styles.grid} pointerEvents="none">
         {Array.from({ length: 6 }).map((_, i) => (
           <View key={`h${i}`} style={[styles.gridLine, styles.gridH, { top: `${(i + 1) * 14}%` }]} />
         ))}
@@ -34,7 +59,7 @@ export default function MapCanvasPlaceholder({ pickup, pickupLabel, drop, dropLa
 
       {/* Indicative markers near the centre — not geographically projected,
           but labelled with the real place name so it's not just coloured dots. */}
-      <View style={styles.markers}>
+      <View style={styles.markers} pointerEvents="none">
         {pickup ? (
           <View style={styles.markerGroup}>
             <View style={[styles.pin, styles.pickupPin]} />
@@ -58,7 +83,35 @@ export default function MapCanvasPlaceholder({ pickup, pickupLabel, drop, dropLa
         ) : null}
       </View>
 
-      {dim ? <View style={styles.dim} /> : null}
+      {/* Nearby available riders — tap one for its distance/vehicle card. */}
+      {anchor && nearby
+        ? nearby.map((rider) => {
+            const { x, y } = offsetFor(rider, anchor);
+            return (
+              <Pressable
+                key={rider.id}
+                style={[styles.nearbyWrap, { left: `50%`, top: `50%`, marginLeft: x - 14, marginTop: y - 14 }]}
+                onPress={() => setSelected((cur) => (cur?.id === rider.id ? null : rider))}
+                accessibilityRole="button"
+                accessibilityLabel="Nearby rider"
+              >
+                <RiderVehicleMarker vehicleType={rider.vehicleType ?? 'bike'} heading={rider.heading} />
+              </Pressable>
+            );
+          })
+        : null}
+
+      {selected ? (
+        <View style={styles.infoCard} pointerEvents="box-none">
+          <Text style={styles.infoTitle}>Rider available</Text>
+          <Text style={styles.infoBody}>
+            {VEHICLE_META[selected.vehicleType ?? 'bike'].label}
+            {selected.distanceKm != null ? ` · ${selected.distanceKm.toFixed(1)} km from pickup` : ''}
+          </Text>
+        </View>
+      ) : null}
+
+      {dim ? <View style={styles.dim} pointerEvents="none" /> : null}
     </View>
   );
 }
@@ -92,5 +145,19 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   labelText: { fontFamily: font.semibold, fontSize: 10.5, color: colors.navy800 },
+  nearbyWrap: { position: 'absolute' },
+  infoCard: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 16,
+    backgroundColor: colors.white,
+    borderRadius: radius.card,
+    padding: 12,
+    gap: 2,
+    ...shadow.card,
+  },
+  infoTitle: { fontFamily: font.bold, fontSize: 13, color: colors.navy800 },
+  infoBody: { fontFamily: font.regular, fontSize: 12, color: colors.ink600 },
   dim: { ...fillObject, backgroundColor: 'rgba(15,42,71,0.5)' },
 });

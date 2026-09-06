@@ -1,9 +1,11 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import Mapbox, { MapView, Camera, MarkerView, ShapeSource, LineLayer } from '@rnmapbox/maps';
-import { colors, font } from '../theme';
+import { colors, font, radius, shadow } from '../theme';
+import { VEHICLE_META } from '../types';
+import RiderVehicleMarker from './RiderVehicleMarker';
 import type { AppConfig } from '../types';
-import type { LatLng, MapCanvasProps } from './mapCanvasTypes';
+import type { LatLng, MapCanvasProps, NearbyRiderMarker } from './mapCanvasTypes';
 
 // -----------------------------------------------------------------------------
 // REAL MAP (native @rnmapbox/maps). Only ever loaded via the dynamic require()
@@ -63,6 +65,7 @@ export default function MapCanvasReal({
   nearby,
   dim,
 }: MapCanvasProps) {
+  const [selected, setSelected] = useState<NearbyRiderMarker | null>(null);
   const focus = center ?? pickup ?? drop ?? FALLBACK_CENTER;
 
   const bounds = useMemo(() => {
@@ -113,9 +116,15 @@ export default function MapCanvasReal({
           </ShapeSource>
         ) : null}
 
-        {nearby?.map((p, i) => (
-          <MarkerView key={`nearby-${i}`} coordinate={[p.lng, p.lat]} anchor={{ x: 0.5, y: 0.5 }}>
-            <View style={styles.nearbyDot} />
+        {nearby?.map((rider) => (
+          <MarkerView key={rider.id} coordinate={[rider.lng, rider.lat]} anchor={{ x: 0.5, y: 0.5 }}>
+            <Pressable
+              onPress={() => setSelected((cur) => (cur?.id === rider.id ? null : rider))}
+              accessibilityRole="button"
+              accessibilityLabel="Nearby rider"
+            >
+              <RiderVehicleMarker vehicleType={rider.vehicleType ?? 'bike'} heading={rider.heading} />
+            </Pressable>
           </MarkerView>
         ))}
 
@@ -162,6 +171,16 @@ export default function MapCanvasReal({
         ) : null}
       </MapView>
 
+      {selected ? (
+        <View style={styles.infoCard} pointerEvents="box-none">
+          <Text style={styles.infoTitle}>Rider available</Text>
+          <Text style={styles.infoBody}>
+            {VEHICLE_META[selected.vehicleType ?? 'bike'].label}
+            {selected.distanceKm != null ? ` · ${selected.distanceKm.toFixed(1)} km from pickup` : ''}
+          </Text>
+        </View>
+      ) : null}
+
       {dim ? <View style={styles.dim} pointerEvents="none" /> : null}
     </View>
   );
@@ -193,14 +212,19 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: colors.white,
   },
-  nearbyDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.ink400,
-    borderWidth: 2,
-    borderColor: colors.white,
+  infoCard: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 16,
+    backgroundColor: colors.white,
+    borderRadius: radius.card,
+    padding: 12,
+    gap: 2,
+    ...shadow.card,
   },
+  infoTitle: { fontFamily: font.bold, fontSize: 13, color: colors.navy800 },
+  infoBody: { fontFamily: font.regular, fontSize: 12, color: colors.ink600 },
   labelPill: {
     maxWidth: 160,
     paddingHorizontal: 10,

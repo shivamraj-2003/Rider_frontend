@@ -138,6 +138,16 @@ export interface SavedPlace extends Place {
   label: string;
 }
 
+// GET /riders/nearby — dots on the customer's pre-booking map.
+export interface NearbyRider {
+  rider_id: string;
+  lat: number;
+  lng: number;
+  heading: number | null;
+  distance_km: number;
+  vehicle_type: VehicleType;
+}
+
 // GET /places/popular — real most-booked drop points near a location,
 // grouped from completed bookings across all customers.
 export interface PopularPlace {

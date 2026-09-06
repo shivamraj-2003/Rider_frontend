@@ -5,6 +5,7 @@ import type {
   BookingOut,
   EarningsEntry,
   EarningsSummary,
+  NearbyRider,
   RiderAvailability,
   RiderMe,
   RiderStats,
@@ -31,6 +32,14 @@ export function onboardRider(payload: OnboardRiderRequest) {
 // gate) treats 404 as a normal answer, not a failure - don't log it as one.
 export function getRiderMe() {
   return api.get<RiderMe>('/riders/me', { silentStatuses: [404] });
+}
+
+// GET /riders/nearby — real nearby-available-rider dots for the customer's
+// pre-booking map (not the dispatch pipeline).
+export function getNearbyRiders(lat: number, lng: number, vehicleType?: VehicleType) {
+  const params = new URLSearchParams({ lat: String(lat), lng: String(lng) });
+  if (vehicleType) params.set('vehicle_type', vehicleType);
+  return api.get<NearbyRider[]>(`/riders/nearby?${params.toString()}`);
 }
 
 export type DocumentType = 'licence' | 'rc' | 'aadhaar';

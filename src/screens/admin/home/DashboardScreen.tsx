@@ -107,17 +107,15 @@ export default function DashboardScreen() {
                 {logs.length === 0 ? (
                   <Text style={[styles.dim, styles.pad]}>Nothing logged yet.</Text>
                 ) : (
-                  <View style={styles.listInset}>
-                    {logs.map((l, i) => (
-                      <ListRow
-                        key={l.id}
-                        title={titleCase(l.action)}
-                        subtitle={`${titleCase(l.entity_type)}${l.actor_role ? ` · ${l.actor_role}` : ''}`}
-                        trailing={relativeTime(l.created_at)}
-                        divider={i < logs.length - 1}
-                      />
-                    ))}
-                  </View>
+                  logs.map((l, i) => (
+                    <ListRow
+                      key={l.id}
+                      title={titleCase(l.action)}
+                      subtitle={`${titleCase(l.entity_type)}${l.actor_role ? ` · ${l.actor_role}` : ''}`}
+                      trailing={relativeTime(l.created_at)}
+                      divider={i < logs.length - 1}
+                    />
+                  ))
                 )}
               </SectionCard>
             </>
@@ -143,7 +141,6 @@ function QuickLink({ label, value, onPress }: { label: string; value: number; on
 const styles = StyleSheet.create({
   dim: { fontFamily: font.regular, fontSize: 13, color: colors.ink400 },
   pad: { padding: space.md },
-  listInset: { paddingHorizontal: space.sm },
   legendRow: { flexDirection: 'row', gap: space.lg, marginTop: space.sm },
   legendItem: { fontFamily: font.medium, fontSize: 12, color: colors.ink600 },
   legendVal: { fontFamily: font.bold, color: colors.navy800 },

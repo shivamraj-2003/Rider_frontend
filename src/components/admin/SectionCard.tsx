@@ -28,7 +28,7 @@ export default function SectionCard({
           ) : null}
         </View>
       ) : null}
-      <View style={padded ? styles.body : undefined}>{children}</View>
+      <View style={padded ? styles.body : styles.looseBody}>{children}</View>
       {footer}
     </View>
   );
@@ -53,4 +53,7 @@ const styles = StyleSheet.create({
   title: { fontFamily: font.bold, fontSize: 14, color: colors.navy800 },
   action: { fontFamily: font.bold, fontSize: 12.5, color: colors.accentDark },
   body: { paddingHorizontal: space.md, paddingBottom: space.md, paddingTop: 2 },
+  // Rows/lists render edge-to-edge for full-width dividers, but still want a
+  // little breathing room from the card's sides and bottom.
+  looseBody: { paddingHorizontal: space.sm, paddingBottom: space.sm },
 });

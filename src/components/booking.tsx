@@ -44,13 +44,13 @@ export function Sheet({
 
   return (
     <Animated.View style={[s.sheet, style, dragStyle]} onLayout={onLayout}>
-      <Pressable
-        style={s.grabZone}
-        onPress={usingPeek && collapseGesture.collapsed ? collapseGesture.expand : undefined}
-        {...panHandlers}
-      >
+      {/* A plain View, not Pressable — Pressable's own responder handling
+          fought PanResponder for the gesture and silently ate the drag.
+          Tap-to-expand when peeking is handled inside useSwipeCollapse's
+          own release handler instead. */}
+      <View style={s.grabZone} {...panHandlers}>
         <View style={s.grab} />
-      </Pressable>
+      </View>
       {children}
     </Animated.View>
   );

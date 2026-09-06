@@ -20,15 +20,24 @@ export function useSwipeCollapse(sheetHeight: number, peekVisible: number = 64) 
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponderCapture: (_evt, g) =>
-        Math.abs(g.dy) > 8 && Math.abs(g.dy) > Math.abs(g.dx) * 1.5,
+      // Claim the responder on touch-down, not just once a drag is already
+      // under way: this handle is a small dedicated strip with nothing
+      // scrollable under it, and a Pressable layered on top of PanResponder
+      // here fought it for the responder and swallowed the whole gesture —
+      // that's why dragging did nothing. Claiming immediately also lets a
+      // plain tap (see release, below) double as "expand".
+      onStartShouldSetPanResponder: () => true,
       onPanResponderMove: (_evt, g) => {
         const base = collapsedRef.current ? maxTranslate : 0;
         const next = base + g.dy;
         translateY.setValue(Math.max(0, Math.min(maxTranslate, next)));
       },
       onPanResponderRelease: (_evt, g) => {
+        const isTap = Math.abs(g.dx) < 6 && Math.abs(g.dy) < 6;
+        if (isTap) {
+          if (collapsedRef.current) snapTo(0, false); // tap the peeking handle to expand
+          return;
+        }
         const base = collapsedRef.current ? maxTranslate : 0;
         const projected = base + g.dy;
         const shouldCollapse = projected > maxTranslate / 2 || g.vy > 0.6;

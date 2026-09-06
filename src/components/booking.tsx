@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet, StyleProp, ViewStyle } from 'react-native';
+import { View, Text, Pressable, Animated, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import type { TablerIcon as Icon } from '../types/icon';
 import { colors, type, radius, shadow, font } from '../theme';
 import { rupees } from '../types';
+import { useSwipeDismiss } from '../hooks/useSwipeDismiss';
 
 // Booking-flow UI primitives (Phase 2). Grouped in one file because they are
 // only used together across the five booking screens; the app's generic
@@ -14,15 +15,21 @@ import { rupees } from '../types';
 export function Sheet({
   children,
   style,
+  onDismiss,
 }: {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
+  // Drag the sheet down past a threshold (or flick it down) to close it —
+  // e.g. navigation.goBack(). Omit on a sheet with nowhere to go back to
+  // (the Home tab's own "Where are you going?" sheet).
+  onDismiss?: () => void;
 }) {
+  const { panHandlers, style: dragStyle } = useSwipeDismiss(onDismiss);
   return (
-    <View style={[s.sheet, style]}>
+    <Animated.View style={[s.sheet, style, onDismiss ? dragStyle : null]} {...panHandlers}>
       <View style={s.grab} />
       {children}
-    </View>
+    </Animated.View>
   );
 }
 

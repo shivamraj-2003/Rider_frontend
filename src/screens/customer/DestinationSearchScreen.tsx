@@ -4,6 +4,7 @@ import {
   Text,
   TextInput,
   Pressable,
+  Animated,
   ScrollView,
   ActivityIndicator,
   StyleSheet,
@@ -16,6 +17,7 @@ import { colors, font, radius } from '../../theme';
 import { PlaceRow, TripRail } from '../../components/booking';
 import { searchPlaces, getSavedPlaces, reverseGeocode } from '../../services/customer';
 import { ApiError } from '../../services/api';
+import { useSwipeDismiss } from '../../hooks/useSwipeDismiss';
 import type { Place, SavedPlace } from '../../types';
 import type { CustomerStackParamList } from '../../navigation/CustomerNavigator';
 
@@ -128,10 +130,15 @@ export default function DestinationSearchScreen({ navigation, route }: Props) {
 
   const showSaved = query.trim().length < MIN_CHARS;
   const promptLabel = field === 'pickup' ? 'Search for a pickup point' : 'Search for a drop-off';
+  const { panHandlers, style: dragStyle } = useSwipeDismiss(() => navigation.goBack());
 
   return (
-    <View style={styles.root}>
+    <Animated.View style={[styles.root, dragStyle]}>
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+        {/* Drag this handle down to close, same gesture as the booking sheets. */}
+        <View style={styles.grabZone} {...panHandlers}>
+          <View style={styles.grab} />
+        </View>
         <View style={styles.headerTop}>
           <Pressable
             onPress={() => navigation.goBack()}
@@ -214,7 +221,7 @@ export default function DestinationSearchScreen({ navigation, route }: Props) {
           <Text style={styles.mapBtnLabel}>Use current location</Text>
         </Pressable>
       </ScrollView>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -226,6 +233,8 @@ const styles = StyleSheet.create({
     paddingBottom: 18,
     gap: 16,
   },
+  grabZone: { alignItems: 'center', paddingBottom: 10 },
+  grab: { width: 44, height: 5, borderRadius: 3, backgroundColor: colors.line300 },
   headerTop: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   back: {
     width: 44,

@@ -28,13 +28,28 @@ const STATUS_COPY: Record<string, string> = {
 export default function AccountScreen({ navigation }: Props) {
   const { user, switchRole } = useAuth();
   const [riderMe, setRiderMe] = useState<RiderMe | null | undefined>(undefined); // undefined = loading
+  const [riderErr, setRiderErr] = useState<string | null>(null);
   const [switching, setSwitching] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadRiderStatus = useCallback(() => {
+    setRiderErr(null);
     getRiderMe()
-      .then(setRiderMe)
-      .catch(() => setRiderMe(null));
+      .then((me) => {
+        setRiderMe(me);
+        setRiderErr(null);
+      })
+      .catch((e) => {
+        // Only a real 404 ("no rider profile") should fall through to the
+        // Become-a-Rider CTA. A 403 (deactivated account), 500 or network
+        // error must not hide a pending application — show it for retry.
+        setRiderMe(null);
+        if (!(e instanceof ApiError) || e.status === 404 || e.code === 'not_found') {
+          setRiderErr(null);
+        } else {
+          setRiderErr(e.message || 'Could not load your rider status.');
+        }
+      });
   }, []);
 
   // Re-check on every focus: a rider application submitted elsewhere, or an
@@ -77,6 +92,11 @@ export default function AccountScreen({ navigation }: Props) {
 
         {riderMe === undefined ? (
           <ActivityIndicator color={colors.accentDark} />
+        ) : riderErr ? (
+          <Pressable style={styles.noticeCard} onPress={loadRiderStatus}>
+            <Text style={styles.noticeText}>{riderErr}</Text>
+            <Text style={styles.error}>Tap to retry</Text>
+          </Pressable>
         ) : riderMe === null ? (
           <Pressable style={styles.riderCta} onPress={() => navigation.navigate('BecomeRider')}>
             <View style={styles.riderCtaIcon}>

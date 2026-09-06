@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { colors, font, radius, shadow } from '../theme';
 import { VEHICLE_META } from '../types';
 import RiderVehicleMarker from './RiderVehicleMarker';
+import { useSmoothLatLng } from '../hooks/useSmoothLatLng';
 import type { MapCanvasProps, NearbyRiderMarker } from './mapCanvasTypes';
 
 // -----------------------------------------------------------------------------
@@ -25,11 +26,37 @@ function shortLabel(label?: string | null): string | null {
 // there's no true ground distance to map to pixels here), so several riders
 // don't all pile on the same spot and their rough relative position/spread
 // still means something.
-function offsetFor(rider: NearbyRiderMarker, anchor: { lat: number; lng: number }) {
-  const dx = (rider.lng - anchor.lng) * 4000;
-  const dy = (anchor.lat - rider.lat) * 4000;
+function offsetFor(point: { lat: number; lng: number }, anchor: { lat: number; lng: number }) {
+  const dx = (point.lng - anchor.lng) * 4000;
+  const dy = (anchor.lat - point.lat) * 4000;
   const clamp = (n: number) => Math.max(-130, Math.min(130, n));
   return { x: clamp(dx), y: clamp(dy) };
+}
+
+// Smooths the rider's own lat/lng before turning it into a pixel offset, so
+// even this schematic view glides between GPS fixes instead of jumping.
+function SmoothNearbyDot({
+  rider,
+  anchor,
+  onPress,
+}: {
+  rider: NearbyRiderMarker;
+  anchor: { lat: number; lng: number };
+  onPress: () => void;
+}) {
+  const pos = useSmoothLatLng(rider);
+  if (!pos) return null;
+  const { x, y } = offsetFor(pos, anchor);
+  return (
+    <Pressable
+      style={[styles.nearbyWrap, { left: '50%', top: '50%', marginLeft: x - 14, marginTop: y - 14 }]}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel="Nearby rider"
+    >
+      <RiderVehicleMarker vehicleType={rider.vehicleType ?? 'bike'} heading={rider.heading} />
+    </Pressable>
+  );
 }
 
 export default function MapCanvasPlaceholder({
@@ -85,20 +112,14 @@ export default function MapCanvasPlaceholder({
 
       {/* Nearby available riders — tap one for its distance/vehicle card. */}
       {anchor && nearby
-        ? nearby.map((rider) => {
-            const { x, y } = offsetFor(rider, anchor);
-            return (
-              <Pressable
-                key={rider.id}
-                style={[styles.nearbyWrap, { left: `50%`, top: `50%`, marginLeft: x - 14, marginTop: y - 14 }]}
-                onPress={() => setSelected((cur) => (cur?.id === rider.id ? null : rider))}
-                accessibilityRole="button"
-                accessibilityLabel="Nearby rider"
-              >
-                <RiderVehicleMarker vehicleType={rider.vehicleType ?? 'bike'} heading={rider.heading} />
-              </Pressable>
-            );
-          })
+        ? nearby.map((rider) => (
+            <SmoothNearbyDot
+              key={rider.id}
+              rider={rider}
+              anchor={anchor}
+              onPress={() => setSelected((cur) => (cur?.id === rider.id ? null : rider))}
+            />
+          ))
         : null}
 
       {selected ? (

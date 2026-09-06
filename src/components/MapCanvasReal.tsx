@@ -4,6 +4,7 @@ import Mapbox, { MapView, Camera, MarkerView, ShapeSource, LineLayer } from '@rn
 import { colors, font, radius, shadow } from '../theme';
 import { VEHICLE_META } from '../types';
 import RiderVehicleMarker from './RiderVehicleMarker';
+import { useSmoothLatLng } from '../hooks/useSmoothLatLng';
 import type { AppConfig } from '../types';
 import type { LatLng, MapCanvasProps, NearbyRiderMarker } from './mapCanvasTypes';
 
@@ -38,6 +39,27 @@ function shortLabel(label?: string | null): string | null {
   return label.split(',')[0].trim() || null;
 }
 
+// One nearby marker's own smoothing - each list item is its own component
+// instance, so calling a hook here is safe even though the list re-renders
+// every poll.
+function SmoothNearbyMarker({
+  rider,
+  onPress,
+}: {
+  rider: NearbyRiderMarker;
+  onPress: () => void;
+}) {
+  const pos = useSmoothLatLng(rider);
+  if (!pos) return null;
+  return (
+    <MarkerView coordinate={[pos.lng, pos.lat]} anchor={{ x: 0.5, y: 0.5 }}>
+      <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel="Nearby rider">
+        <RiderVehicleMarker vehicleType={rider.vehicleType ?? 'bike'} heading={rider.heading} />
+      </Pressable>
+    </MarkerView>
+  );
+}
+
 function boundsFor(points: LatLng[]): { ne: [number, number]; sw: [number, number] } | null {
   if (points.length < 2) return null;
   let minLat = points[0].lat;
@@ -66,6 +88,7 @@ export default function MapCanvasReal({
   dim,
 }: MapCanvasProps) {
   const [selected, setSelected] = useState<NearbyRiderMarker | null>(null);
+  const smoothRiderLocation = useSmoothLatLng(riderLocation);
   const focus = center ?? pickup ?? drop ?? FALLBACK_CENTER;
 
   const bounds = useMemo(() => {
@@ -117,19 +140,15 @@ export default function MapCanvasReal({
         ) : null}
 
         {nearby?.map((rider) => (
-          <MarkerView key={rider.id} coordinate={[rider.lng, rider.lat]} anchor={{ x: 0.5, y: 0.5 }}>
-            <Pressable
-              onPress={() => setSelected((cur) => (cur?.id === rider.id ? null : rider))}
-              accessibilityRole="button"
-              accessibilityLabel="Nearby rider"
-            >
-              <RiderVehicleMarker vehicleType={rider.vehicleType ?? 'bike'} heading={rider.heading} />
-            </Pressable>
-          </MarkerView>
+          <SmoothNearbyMarker
+            key={rider.id}
+            rider={rider}
+            onPress={() => setSelected((cur) => (cur?.id === rider.id ? null : rider))}
+          />
         ))}
 
-        {riderLocation ? (
-          <MarkerView coordinate={[riderLocation.lng, riderLocation.lat]} anchor={{ x: 0.5, y: 0.5 }}>
+        {smoothRiderLocation ? (
+          <MarkerView coordinate={[smoothRiderLocation.lng, smoothRiderLocation.lat]} anchor={{ x: 0.5, y: 0.5 }}>
             <View style={styles.riderPin} />
           </MarkerView>
         ) : null}

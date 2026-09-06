@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState, useCall
 import { AppState } from 'react-native';
 import { api } from '../services/api';
 import { useAuth } from './AuthContext';
+import { configureMapbox } from '../components/MapCanvas';
 import type { AppConfig, BookingOut } from '../types';
 
 interface AppConfigContextValue {
@@ -38,6 +39,7 @@ export function AppConfigProvider({ children }: PropsWithChildren) {
     try {
       const nextConfig = await api.get<AppConfig>('/config');
       setConfig(nextConfig);
+      configureMapbox(nextConfig);
 
       if (nextConfig.role === 'customer') {
         const active = await api.get<BookingOut | null>('/bookings/current');

@@ -1,25 +1,31 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import Mapbox, { MapView, Camera, MarkerView, ShapeSource, LineLayer } from '@rnmapbox/maps';
 import { colors, font } from '../theme';
 import type { AppConfig, RouteGeometry } from '../types';
 
 // -----------------------------------------------------------------------------
-// PLACEHOLDER MAP. Option A(ii) from the Phase 2 plan: no @rnmapbox/maps yet, so
-// the booking flow keeps working in Expo Go. The prop surface matches the real
-// MapCanvas 1:1 — when the native SDK lands, replace the body of this file with
-// a Mapbox.MapView and nothing in the screens changes.
-//
-// Real map TODO(phase-2):
-//   - npx expo install @rnmapbox/maps  (needs a dev client, not Expo Go)
-//   - Mapbox.setAccessToken(config.mapbox_public_token) in configureMapbox()
-//   - GeoJSON is [lng, lat]; draw route / pickup / drop / rider markers
+// REAL MAP (native @rnmapbox/maps). Requires a dev client — this component
+// (and therefore the whole app, since it's imported eagerly) no longer runs
+// in Expo Go. Run `npx expo prebuild` + `npx expo run:android` / `run:ios`
+// (or an EAS dev-client build) after installing this. See app.config.js for
+// the download-token setup this needs at build time.
 // -----------------------------------------------------------------------------
 
 type LatLng = { lat: number; lng: number };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function configureMapbox(_config: AppConfig): void {
-  // no-op until the native SDK is wired
+// Falls back to Bengaluru (this deployment's launch city, per the app's own
+// sample places) only when we truly have no coordinate to centre on yet.
+const FALLBACK_CENTER: LatLng = { lat: 12.9716, lng: 77.5946 };
+
+let tokenSet = false;
+
+// Called once from AppConfigContext after GET /config resolves.
+export function configureMapbox(config: AppConfig): void {
+  if (tokenSet || !config.mapbox_public_token) return;
+  Mapbox.setAccessToken(config.mapbox_public_token);
+  Mapbox.setTelemetryEnabled(false);
+  tokenSet = true;
 }
 
 interface MapCanvasProps {
@@ -36,53 +42,139 @@ interface MapCanvasProps {
 }
 
 // Trims a full Mapbox place_name ("MG Road, Bengaluru, Karnataka 560001,
-// India") down to the headline the reference UI shows next to a pin.
+// India") down to the headline a marker label shows.
 function shortLabel(label?: string | null): string | null {
   if (!label) return null;
   return label.split(',')[0].trim() || null;
 }
 
-export default function MapCanvas({ pickup, pickupLabel, drop, dropLabel, riderLocation, dim }: MapCanvasProps) {
+function boundsFor(points: LatLng[]): { ne: [number, number]; sw: [number, number] } | null {
+  if (points.length < 2) return null;
+  let minLat = points[0].lat;
+  let maxLat = points[0].lat;
+  let minLng = points[0].lng;
+  let maxLng = points[0].lng;
+  for (const p of points) {
+    minLat = Math.min(minLat, p.lat);
+    maxLat = Math.max(maxLat, p.lat);
+    minLng = Math.min(minLng, p.lng);
+    maxLng = Math.max(maxLng, p.lng);
+  }
+  return { ne: [maxLng, maxLat], sw: [minLng, minLat] };
+}
+
+export default function MapCanvas({
+  styleUrl,
+  center,
+  pickup,
+  pickupLabel,
+  drop,
+  dropLabel,
+  route,
+  riderLocation,
+  nearby,
+  dim,
+}: MapCanvasProps) {
+  const focus = center ?? pickup ?? drop ?? FALLBACK_CENTER;
+
+  const bounds = useMemo(() => {
+    const pts: LatLng[] = [];
+    if (pickup) pts.push(pickup);
+    if (drop) pts.push(drop);
+    if (riderLocation) pts.push(riderLocation);
+    return boundsFor(pts);
+  }, [pickup, drop, riderLocation]);
+
+  const routeFeature = useMemo(
+    () => (route ? { type: 'Feature' as const, properties: {}, geometry: route } : null),
+    [route]
+  );
+
   return (
-    <View style={styles.fill} pointerEvents="none">
-      <View style={styles.base} />
-      {/* Faint grid so it reads as a map surface, not a blank panel. */}
-      <View style={styles.grid}>
-        {Array.from({ length: 6 }).map((_, i) => (
-          <View key={`h${i}`} style={[styles.gridLine, styles.gridH, { top: `${(i + 1) * 14}%` }]} />
-        ))}
-        {Array.from({ length: 4 }).map((_, i) => (
-          <View key={`v${i}`} style={[styles.gridLine, styles.gridV, { left: `${(i + 1) * 20}%` }]} />
-        ))}
-      </View>
+    <View style={styles.fill}>
+      <MapView
+        style={styles.fill}
+        styleURL={styleUrl ?? Mapbox.StyleURL.Street}
+        logoEnabled={false}
+        attributionEnabled={false}
+        scaleBarEnabled={false}
+        compassEnabled={false}
+      >
+        {bounds ? (
+          <Camera
+            bounds={{
+              ne: bounds.ne,
+              sw: bounds.sw,
+              paddingLeft: 60,
+              paddingRight: 60,
+              paddingTop: 120,
+              paddingBottom: 220,
+            }}
+            animationDuration={450}
+          />
+        ) : (
+          <Camera centerCoordinate={[focus.lng, focus.lat]} zoomLevel={14} animationDuration={450} />
+        )}
 
-      {/* Indicative markers near the centre — not geographically projected,
-          but labelled with the real place name so it's not just coloured dots. */}
-      <View style={styles.markers}>
+        {routeFeature ? (
+          <ShapeSource id="routeSource" shape={routeFeature}>
+            <LineLayer
+              id="routeLine"
+              style={{ lineColor: colors.accent, lineWidth: 4, lineCap: 'round', lineJoin: 'round' }}
+            />
+          </ShapeSource>
+        ) : null}
+
+        {nearby?.map((p, i) => (
+          <MarkerView key={`nearby-${i}`} coordinate={[p.lng, p.lat]} anchor={{ x: 0.5, y: 0.5 }}>
+            <View style={styles.nearbyDot} />
+          </MarkerView>
+        ))}
+
+        {riderLocation ? (
+          <MarkerView coordinate={[riderLocation.lng, riderLocation.lat]} anchor={{ x: 0.5, y: 0.5 }}>
+            <View style={styles.riderPin} />
+          </MarkerView>
+        ) : null}
+
         {pickup ? (
-          <View style={styles.markerGroup}>
-            <View style={[styles.pin, styles.pickupPin]} />
-            {shortLabel(pickupLabel) ? (
-              <View style={styles.labelPill}>
-                <Text style={styles.labelText} numberOfLines={1}>{shortLabel(pickupLabel)}</Text>
+          <MarkerView coordinate={[pickup.lng, pickup.lat]} anchor={{ x: 0.5, y: 1 }}>
+            <View style={styles.markerColumn}>
+              {shortLabel(pickupLabel) ? (
+                <View style={styles.labelPill}>
+                  <Text style={styles.labelHeading}>Pickup</Text>
+                  <Text style={styles.labelText} numberOfLines={1}>
+                    {shortLabel(pickupLabel)}
+                  </Text>
+                </View>
+              ) : null}
+              <View style={styles.pin}>
+                <View style={styles.pinDot} />
               </View>
-            ) : null}
-          </View>
+            </View>
+          </MarkerView>
         ) : null}
-        {riderLocation ? <View style={[styles.pin, styles.riderPin]} /> : null}
-        {drop ? (
-          <View style={styles.markerGroup}>
-            <View style={[styles.pin, styles.dropPin]} />
-            {shortLabel(dropLabel) ? (
-              <View style={styles.labelPill}>
-                <Text style={styles.labelText} numberOfLines={1}>{shortLabel(dropLabel)}</Text>
-              </View>
-            ) : null}
-          </View>
-        ) : null}
-      </View>
 
-      {dim ? <View style={styles.dim} /> : null}
+        {drop ? (
+          <MarkerView coordinate={[drop.lng, drop.lat]} anchor={{ x: 0.5, y: 1 }}>
+            <View style={styles.markerColumn}>
+              {shortLabel(dropLabel) ? (
+                <View style={styles.labelPill}>
+                  <Text style={styles.labelHeading}>Drop</Text>
+                  <Text style={styles.labelText} numberOfLines={1}>
+                    {shortLabel(dropLabel)}
+                  </Text>
+                </View>
+              ) : null}
+              <View style={[styles.pin, styles.dropPin]}>
+                <View style={[styles.pinDot, styles.dropPinDot]} />
+              </View>
+            </View>
+          </MarkerView>
+        ) : null}
+      </MapView>
+
+      {dim ? <View style={styles.dim} pointerEvents="none" /> : null}
     </View>
   );
 }
@@ -91,30 +183,55 @@ const fillObject = { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 
 
 const styles = StyleSheet.create({
   fill: { ...fillObject },
-  base: { ...fillObject, backgroundColor: colors.mapBase },
-  grid: { ...fillObject },
-  gridLine: { position: 'absolute', backgroundColor: colors.mapGrid },
-  gridH: { left: 0, right: 0, height: 1 },
-  gridV: { top: 0, bottom: 0, width: 1 },
-  markers: {
-    ...fillObject,
+  markerColumn: { alignItems: 'center', gap: 6 },
+  pin: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.accent,
+    borderWidth: 3,
+    borderColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 18,
   },
-  markerGroup: { alignItems: 'center', gap: 6 },
-  pin: { borderWidth: 3, borderColor: colors.white },
-  pickupPin: { width: 18, height: 18, borderRadius: 9, backgroundColor: colors.accent },
-  dropPin: { width: 16, height: 16, borderRadius: 3, backgroundColor: colors.navy800 },
-  riderPin: { width: 30, height: 30, borderRadius: 10, backgroundColor: colors.navy800 },
-  labelPill: {
-    maxWidth: 110,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+  pinDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.white },
+  dropPin: { backgroundColor: colors.navy800, borderRadius: 8 },
+  dropPinDot: { borderRadius: 2 },
+  riderPin: {
+    width: 30,
+    height: 30,
     borderRadius: 10,
-    backgroundColor: colors.white,
+    backgroundColor: colors.navy800,
+    borderWidth: 3,
+    borderColor: colors.white,
   },
-  labelText: { fontFamily: font.semibold, fontSize: 10.5, color: colors.navy800 },
+  nearbyDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.ink400,
+    borderWidth: 2,
+    borderColor: colors.white,
+  },
+  labelPill: {
+    maxWidth: 160,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    backgroundColor: colors.white,
+    shadowColor: '#0F2A47',
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
+  },
+  labelHeading: {
+    fontFamily: font.semibold,
+    fontSize: 9.5,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    color: colors.ink400,
+  },
+  labelText: { fontFamily: font.bold, fontSize: 12.5, color: colors.navy800 },
   dim: { ...fillObject, backgroundColor: 'rgba(15,42,71,0.5)' },
 });

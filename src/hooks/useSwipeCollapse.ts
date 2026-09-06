@@ -8,6 +8,16 @@ import { Animated, PanResponder } from 'react-native';
 // sheet's own rendered height (from onLayout) to know how far "peek" is.
 export function useSwipeCollapse(sheetHeight: number, peekVisible: number = 64) {
   const maxTranslate = Math.max(0, sheetHeight - peekVisible);
+  // PanResponder.create() only runs once (it's built inside useRef) — its
+  // callbacks close over whatever `maxTranslate` was on that FIRST render,
+  // which is 0 (sheetHeight isn't known until onLayout fires). Without this
+  // ref they'd stay frozen at "nothing to collapse", so a drag would never
+  // move the sheet at all no matter how tall it later measured. Keep the
+  // live value in a ref, updated every render, and read that inside the
+  // gesture instead of the closed-over parameter.
+  const maxTranslateRef = useRef(maxTranslate);
+  maxTranslateRef.current = maxTranslate;
+
   const translateY = useRef(new Animated.Value(0)).current;
   const collapsedRef = useRef(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -28,23 +38,25 @@ export function useSwipeCollapse(sheetHeight: number, peekVisible: number = 64) 
       // plain tap (see release, below) double as "expand".
       onStartShouldSetPanResponder: () => true,
       onPanResponderMove: (_evt, g) => {
-        const base = collapsedRef.current ? maxTranslate : 0;
+        const max = maxTranslateRef.current;
+        const base = collapsedRef.current ? max : 0;
         const next = base + g.dy;
-        translateY.setValue(Math.max(0, Math.min(maxTranslate, next)));
+        translateY.setValue(Math.max(0, Math.min(max, next)));
       },
       onPanResponderRelease: (_evt, g) => {
+        const max = maxTranslateRef.current;
         const isTap = Math.abs(g.dx) < 6 && Math.abs(g.dy) < 6;
         if (isTap) {
           if (collapsedRef.current) snapTo(0, false); // tap the peeking handle to expand
           return;
         }
-        const base = collapsedRef.current ? maxTranslate : 0;
+        const base = collapsedRef.current ? max : 0;
         const projected = base + g.dy;
-        const shouldCollapse = projected > maxTranslate / 2 || g.vy > 0.6;
-        snapTo(shouldCollapse ? maxTranslate : 0, shouldCollapse);
+        const shouldCollapse = projected > max / 2 || g.vy > 0.6;
+        snapTo(shouldCollapse ? max : 0, shouldCollapse);
       },
       onPanResponderTerminate: () => {
-        snapTo(collapsedRef.current ? maxTranslate : 0, collapsedRef.current);
+        snapTo(collapsedRef.current ? maxTranslateRef.current : 0, collapsedRef.current);
       },
     })
   ).current;

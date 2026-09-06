@@ -17,9 +17,10 @@ export type BecomeRiderStackParamList = {
 
 const Stack = createNativeStackNavigator<BecomeRiderStackParamList>();
 
-// Mounted as a single screen from CustomerNavigator (pushed from Account).
-// The wizard provider lives here so its state resets every time a customer
-// re-enters the flow, and is gone the moment they leave it.
+// Mounted directly by PostAuthGate when a customer-role account with no
+// RiderProfile picks "Rider" at login - there is no other entry point into
+// this flow. The wizard provider lives here so its state resets every time
+// someone re-enters it, and is gone the moment they leave.
 export default function BecomeRiderNavigator() {
   return (
     <BecomeRiderWizardProvider>

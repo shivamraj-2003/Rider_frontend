@@ -10,6 +10,7 @@ import type {
   Page,
   PaymentMethod,
   Place,
+  PopularPlace,
   SavedPlace,
   VehicleType,
 } from '../types';
@@ -25,6 +26,12 @@ export function searchPlaces(query: string, near?: { lat: number; lng: number },
 
 export function getSavedPlaces() {
   return api.get<SavedPlace[]>('/places/saved');
+}
+
+// GET /places/popular — real most-booked drop points near a location.
+export function getPopularPlaces(lat: number, lng: number, limit = 3) {
+  const params = new URLSearchParams({ lat: String(lat), lng: String(lng), limit: String(limit) });
+  return api.get<PopularPlace[]>(`/places/popular?${params.toString()}`);
 }
 
 // GET /places/reverse — map pin / current position → a Place (or null).

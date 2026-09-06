@@ -4,7 +4,9 @@ import * as ImagePicker from 'expo-image-picker';
 import ScreenScaffold from '../../components/ScreenScaffold';
 import InfoCard from '../../components/InfoCard';
 import Button from '../../components/Button';
+import GradientCard from '../../components/GradientCard';
 import { GlyphTile } from '../../components/booking';
+import { IconCircleCheckFilled } from '@tabler/icons-react-native';
 import { useAuth, ApiError } from '../../context/AuthContext';
 import { getRiderMe, uploadRiderDocument } from '../../services/rider';
 import { colors, font, radius, shadow, space } from '../../theme';
@@ -14,12 +16,13 @@ import type { RiderMe } from '../../types';
 // RiderNavigator's gate only ever mounts this screen once RiderProfile.status
 // === 'approved', so this is a read-only profile view, not an onboarding
 // form — onboarding lives in the "Become a Rider" wizard (BecomeRiderNavigator).
+// The User and Rider flows are fully separate now: there is no in-session
+// mode switch, only ScreenScaffold's logout — a rider who wants the customer
+// app signs out and picks "User" on the next login.
 export default function RiderProfileScreen() {
-  const { user, switchRole } = useAuth();
+  const { user } = useAuth();
   const [riderMe, setRiderMe] = useState<RiderMe | null>(null);
   const [loading, setLoading] = useState(true);
-  const [switching, setSwitching] = useState(false);
-  const [switchError, setSwitchError] = useState<string | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -31,22 +34,11 @@ export default function RiderProfileScreen() {
 
   useEffect(load, []);
 
-  const handleSwitchToUser = async () => {
-    setSwitchError(null);
-    setSwitching(true);
-    try {
-      await switchRole('customer');
-    } catch (err) {
-      setSwitching(false);
-      setSwitchError(err instanceof ApiError ? err.message : 'Could not switch to User Mode.');
-    }
-  };
-
   const initial = (user?.full_name?.trim()?.[0] ?? '?').toUpperCase();
 
   return (
     <ScreenScaffold title="Rider Profile">
-      <View style={styles.profileCard}>
+      <GradientCard style={styles.profileCard}>
         <View style={styles.avatar}>
           <Text style={styles.avatarLabel}>{initial}</Text>
         </View>
@@ -54,18 +46,13 @@ export default function RiderProfileScreen() {
           <Text style={styles.profileName}>{user?.full_name ?? '—'}</Text>
           <Text style={styles.profileSub}>{user?.phone ?? '—'}</Text>
         </View>
-      </View>
+      </GradientCard>
 
       {loading ? (
         <ActivityIndicator color={colors.accentDark} />
       ) : riderMe ? (
         <RiderDetails riderMe={riderMe} onDocumentsUploaded={load} />
       ) : null}
-
-      <View style={styles.section}>
-        <Button title="Switch to User Mode" variant="navy" onPress={handleSwitchToUser} loading={switching} />
-        {switchError ? <Text style={styles.error}>{switchError}</Text> : null}
-      </View>
     </ScreenScaffold>
   );
 }
@@ -123,25 +110,60 @@ function RiderDetails({ riderMe, onDocumentsUploaded }: { riderMe: RiderMe; onDo
       <View style={styles.docSection}>
         <Text style={styles.docLabel}>Documents</Text>
         {error ? <Text style={styles.error}>{error}</Text> : null}
-        <Button
-          title="Upload licence"
-          variant="secondary"
-          onPress={() => handleUpload('licence')}
+        <DocumentRow
+          label="Driving licence"
+          uploaded={!!riderMe.licence_doc_path}
           loading={uploading === 'licence'}
+          onPress={() => handleUpload('licence')}
         />
-        <Button
-          title="Upload RC"
-          variant="secondary"
-          onPress={() => handleUpload('rc')}
+        <DocumentRow
+          label="Vehicle registration (RC)"
+          uploaded={!!riderMe.rc_doc_path}
           loading={uploading === 'rc'}
+          onPress={() => handleUpload('rc')}
         />
-        <Button
-          title="Upload Aadhaar"
-          variant="secondary"
-          onPress={() => handleUpload('aadhaar')}
+        <DocumentRow
+          label="Aadhaar card"
+          uploaded={!!riderMe.aadhaar_doc_path}
           loading={uploading === 'aadhaar'}
+          onPress={() => handleUpload('aadhaar')}
         />
       </View>
+    </View>
+  );
+}
+
+function DocumentRow({
+  label,
+  uploaded,
+  loading,
+  onPress,
+}: {
+  label: string;
+  uploaded: boolean;
+  loading: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <View style={styles.docRow}>
+      <View style={styles.docRowBody}>
+        <Text style={styles.docName}>{label}</Text>
+        {uploaded ? (
+          <View style={styles.docStatusRow}>
+            <IconCircleCheckFilled size={15} color={colors.success} strokeWidth={1.75} />
+            <Text style={styles.docUploaded}>Uploaded</Text>
+          </View>
+        ) : (
+          <Text style={styles.docMissing}>Not uploaded</Text>
+        )}
+      </View>
+      <Button
+        title={uploaded ? 'Replace' : 'Upload'}
+        variant="secondary"
+        onPress={onPress}
+        loading={loading}
+        style={styles.docButton}
+      />
     </View>
   );
 }
@@ -151,23 +173,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.md,
-    backgroundColor: colors.white,
-    borderRadius: radius.card,
     padding: space.lg,
-    ...shadow.card,
   },
   avatar: {
     width: 56,
     height: 56,
     borderRadius: 20,
-    backgroundColor: colors.navy800,
+    backgroundColor: 'rgba(255,255,255,0.16)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarLabel: { fontFamily: font.extrabold, fontSize: 22, color: colors.white },
   profileBody: { flex: 1, gap: 2 },
-  profileName: { fontFamily: font.extrabold, fontSize: 18, color: colors.navy800 },
-  profileSub: { fontFamily: font.regular, fontSize: 13.5, color: colors.ink600 },
+  profileName: { fontFamily: font.extrabold, fontSize: 18, color: colors.white },
+  profileSub: { fontFamily: font.regular, fontSize: 13.5, color: 'rgba(255,255,255,0.7)' },
   vehicleCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -181,7 +200,22 @@ const styles = StyleSheet.create({
   vehicleTitle: { fontFamily: font.bold, fontSize: 15.5, color: colors.navy800 },
   vehicleSub: { fontFamily: font.regular, fontSize: 12.5, color: colors.ink600 },
   section: { gap: space.md },
-  docSection: { gap: space.md, marginTop: space.sm },
-  docLabel: { fontFamily: font.bold, fontSize: 13, color: colors.ink600 },
+  docSection: { gap: space.sm, marginTop: space.sm },
+  docLabel: { fontFamily: font.bold, fontSize: 13, color: colors.ink600, marginBottom: 2 },
+  docRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    backgroundColor: colors.white,
+    borderRadius: radius.card,
+    padding: space.md,
+    ...shadow.card,
+  },
+  docRowBody: { flex: 1, gap: 3 },
+  docName: { fontFamily: font.bold, fontSize: 14.5, color: colors.navy800 },
+  docStatusRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  docUploaded: { fontFamily: font.semibold, fontSize: 12.5, color: colors.success },
+  docMissing: { fontFamily: font.regular, fontSize: 12.5, color: colors.ink400 },
+  docButton: { minWidth: 96, height: 40, paddingHorizontal: space.md },
   error: { fontFamily: font.medium, fontSize: 13, color: colors.danger },
 });

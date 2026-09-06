@@ -4,8 +4,12 @@ import { WS_URL } from '../constants/config';
 import { tokenStore } from '../services/api';
 import type { RideOffer } from '../types';
 
-// Rider offers channel — WS /ws/riders/me (§8). One event today: a fresh offer.
-export type RiderSocketEvent = { event: 'ride_offer' } & RideOffer;
+// Rider offers channel — WS /ws/riders/me (§8). A fresh offer, or notice that
+// a previously-sent offer is void (another rider in the same batch/round
+// already accepted) - the app must drop it immediately, not wait for its TTL.
+export type RiderSocketEvent =
+  | ({ event: 'ride_offer' } & RideOffer)
+  | { event: 'ride_offer_invalidated'; booking_id: string };
 
 const KEEPALIVE_MS = 25_000;
 const BACKOFF_STEP_MS = 2_000;

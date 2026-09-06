@@ -5,7 +5,8 @@ import * as Location from 'expo-location';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { IconAlertTriangle, IconMapPin, IconMessageCircle, IconPhone, IconShare, IconStarFilled } from '@tabler/icons-react-native';
 import Button from '../../components/Button';
-import TextField from '../../components/TextField';
+import CancelRideSheet from '../../components/CancelRideSheet';
+import GradientCard from '../../components/GradientCard';
 import MapCanvas from '../../components/MapCanvas';
 import { useAppConfig } from '../../context/AppConfigContext';
 import { useBookingSocket } from '../../hooks/useBookingSocket';
@@ -18,6 +19,14 @@ import type { BookingLive, BookingOut } from '../../types';
 import type { CustomerStackParamList } from '../../navigation/CustomerNavigator';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'TrackRide'>;
+
+// Same formula DestinationSearchScreen uses for "X km" on a place row —
+// good enough for "how far is my rider" at this scale, no Mapbox call needed.
+function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const dx = (b.lat - a.lat) * 111;
+  const dy = (b.lng - a.lng) * 111 * Math.cos((a.lat * Math.PI) / 180);
+  return Math.sqrt(dx * dx + dy * dy);
+}
 
 const STATUS_LABELS: Record<string, string> = {
   requested: 'Looking for a nearby rider…',
@@ -36,11 +45,28 @@ export default function TrackRideScreen({ route, navigation }: Props) {
   const [live, setLive] = useState<BookingLive | null>(null);
   const [booking, setBooking] = useState<BookingOut | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [cancelReason, setCancelReason] = useState('');
+  const [cancelSheetOpen, setCancelSheetOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
   const [sosSending, setSosSending] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [shared, setShared] = useState(false);
+  const [myLocation, setMyLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+  // Best-effort "how far is my rider from ME" — falls back to the pickup
+  // point (where the customer almost always still is) if location is off.
+  useEffect(() => {
+    (async () => {
+      try {
+        const perm = await Location.getForegroundPermissionsAsync();
+        if (perm.status !== 'granted') return;
+        const pos = await Location.getCurrentPositionAsync({});
+        setMyLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      } catch {
+        // stays null — falls back to pickup below
+      }
+    })();
+  }, []);
 
   const resync = useCallback(async () => {
     try {
@@ -68,15 +94,26 @@ export default function TrackRideScreen({ route, navigation }: Props) {
   // poll only while the socket can't hold a connection.
   useBookingSocket(bookingId, () => resync(), { onResync: resync, onPoll: resync });
 
-  const handleCancel = async () => {
+  const handleCancel = async (reason: string) => {
     setCancelling(true);
-    setError(null);
+    setCancelError(null);
     try {
-      await cancelBooking(bookingId, cancelReason.trim() || 'Changed my mind');
+      await cancelBooking(bookingId, reason);
+      setCancelSheetOpen(false);
       await resync();
       refresh();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not cancel this ride');
+      // The ride can move on (rider arrives, trip starts) in the gap between
+      // opening this sheet and confirming — a 409 here almost always means
+      // that, not a real failure. Resync so the sheet's own guard against
+      // cancelling an in-progress trip (canCancel) picks up the new status,
+      // rather than showing a scary error for something that isn't one.
+      if (err instanceof ApiError && err.status === 409) {
+        setCancelSheetOpen(false);
+        await resync();
+        return;
+      }
+      setCancelError(err instanceof ApiError ? err.message : 'Could not cancel this ride');
     } finally {
       setCancelling(false);
     }
@@ -134,6 +171,9 @@ export default function TrackRideScreen({ route, navigation }: Props) {
   const canShareOrSos = live ? !isTerminal && live.status !== 'requested' : false;
   const insets = useSafeAreaInsets();
   const rider = live?.rider ?? booking?.rider ?? null;
+  const referencePoint = myLocation ?? (booking ? { lat: booking.pickup_lat, lng: booking.pickup_lng } : null);
+  const distanceFromMeKm =
+    referencePoint && live?.rider_location ? haversineKm(referencePoint, live.rider_location) : null;
 
   const handleCall = () => {
     if (rider?.phone) Linking.openURL(`tel:${rider.phone}`);
@@ -165,7 +205,7 @@ export default function TrackRideScreen({ route, navigation }: Props) {
             </View>
           ) : null}
 
-          <View style={styles.statusCard}>
+          <GradientCard style={styles.statusCard}>
             <Text style={styles.statusText}>{STATUS_LABELS[live.status] ?? live.status}</Text>
             {live.eta_minutes != null && !isTerminal ? (
               <Text style={styles.eta}>ETA: {live.eta_minutes} min</Text>
@@ -174,13 +214,15 @@ export default function TrackRideScreen({ route, navigation }: Props) {
               <View style={styles.locationRow}>
                 <IconMapPin size={14} color={colors.accent} strokeWidth={2} />
                 <Text style={styles.location}>
-                  Rider at {live.rider_location.lat.toFixed(4)}, {live.rider_location.lng.toFixed(4)}
+                  {distanceFromMeKm != null
+                    ? `Rider is ${distanceFromMeKm < 1 ? `${Math.round(distanceFromMeKm * 1000)} m` : `${distanceFromMeKm.toFixed(1)} km`} away`
+                    : 'Rider location updating…'}
                 </Text>
               </View>
             ) : !isTerminal ? (
               <Text style={styles.location}>Locating rider…</Text>
             ) : null}
-          </View>
+          </GradientCard>
 
           {rider && !isTerminal ? (
             <View style={styles.riderCard}>
@@ -228,15 +270,14 @@ export default function TrackRideScreen({ route, navigation }: Props) {
           ) : null}
 
           {canCancel ? (
-            <View style={styles.cancelSection}>
-              <TextField
-                label="Cancellation reason (optional)"
-                placeholder="Changed my mind"
-                value={cancelReason}
-                onChangeText={setCancelReason}
-              />
-              <Button title="Cancel ride" variant="secondary" onPress={handleCancel} loading={cancelling} />
-            </View>
+            <Button
+              title="Cancel ride"
+              variant="secondary"
+              onPress={() => {
+                setCancelError(null);
+                setCancelSheetOpen(true);
+              }}
+            />
           ) : null}
 
           {isTerminal ? (
@@ -248,6 +289,19 @@ export default function TrackRideScreen({ route, navigation }: Props) {
           ) : null}
         </>
       )}
+
+      <CancelRideSheet
+        visible={cancelSheetOpen}
+        busy={cancelling}
+        error={cancelError}
+        warning={
+          live?.status === 'assigned' || live?.status === 'arrived'
+            ? 'A cancellation fee may apply since a rider is already on the way.'
+            : undefined
+        }
+        onClose={() => setCancelSheetOpen(false)}
+        onConfirm={handleCancel}
+      />
     </ScrollView>
   );
 }
@@ -256,13 +310,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.surface50 },
   container: { padding: space.xl, gap: space.lg },
   title: { fontFamily: font.extrabold, fontSize: 24, letterSpacing: -0.4, color: colors.navy800 },
-  statusCard: {
-    backgroundColor: colors.navy800,
-    borderRadius: radius.card,
-    padding: space.xl,
-    gap: 6,
-    ...shadow.card,
-  },
+  statusCard: { padding: space.xl, gap: 6 },
   statusText: { fontFamily: font.extrabold, fontSize: 18, color: colors.white },
   eta: { fontFamily: font.semibold, fontSize: 14.5, color: colors.accent },
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },

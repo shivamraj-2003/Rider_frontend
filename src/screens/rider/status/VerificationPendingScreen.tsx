@@ -15,7 +15,7 @@ export default function VerificationPendingScreen({
   onRefresh: () => void;
   refreshing?: boolean;
 }) {
-  const { switchRole } = useAuth();
+  const { signOut } = useAuth();
 
   useEffect(() => {
     const t = setInterval(onRefresh, POLL_MS);
@@ -31,8 +31,8 @@ export default function VerificationPendingScreen({
       primaryLabel="Check status now"
       onPrimary={onRefresh}
       primaryLoading={refreshing}
-      secondaryLabel="Switch to User Mode"
-      onSecondary={() => switchRole('customer')}
+      secondaryLabel="Log out"
+      onSecondary={() => signOut()}
     />
   );
 }

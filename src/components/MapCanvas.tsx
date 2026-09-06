@@ -1,120 +1,52 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { colors, font } from '../theme';
-import type { AppConfig, RouteGeometry } from '../types';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
+import MapCanvasPlaceholder from './MapCanvasPlaceholder';
+import type { MapCanvasProps } from './mapCanvasTypes';
+import type { AppConfig } from '../types';
 
 // -----------------------------------------------------------------------------
-// PLACEHOLDER MAP. Option A(ii) from the Phase 2 plan: no @rnmapbox/maps yet, so
-// the booking flow keeps working in Expo Go. The prop surface matches the real
-// MapCanvas 1:1 — when the native SDK lands, replace the body of this file with
-// a Mapbox.MapView and nothing in the screens changes.
+// Dispatcher: renders the real Mapbox map (MapCanvasReal.tsx) wherever it can
+// actually run, and the schematic MapCanvasPlaceholder everywhere else —
+// principally Expo Go, which cannot load ANY custom native module, Mapbox
+// included, no matter what token is configured. That's a platform capability,
+// not a settings problem: real street tiles only render from a dev-client
+// build (`npx expo prebuild` + `npx expo run:android`/`run:ios`, or an EAS
+// dev-client build) — see MapCanvasReal.tsx's header comment.
 //
-// Real map TODO(phase-2):
-//   - npx expo install @rnmapbox/maps  (needs a dev client, not Expo Go)
-//   - Mapbox.setAccessToken(config.mapbox_public_token) in configureMapbox()
-//   - GeoJSON is [lng, lat]; draw route / pickup / drop / rider markers
+// The require() below is deliberately conditional and deliberately a plain
+// `require`, not a static `import` — Metro still bundles the module either
+// way, but its native-module lookup only actually RUNS when this line
+// executes, so gating it behind the Expo Go check is what keeps Expo Go from
+// crashing on a module it can't load.
 // -----------------------------------------------------------------------------
 
-type LatLng = { lat: number; lng: number };
+const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function configureMapbox(_config: AppConfig): void {
-  // no-op until the native SDK is wired
+type RealModule = {
+  default: React.ComponentType<MapCanvasProps>;
+  configureMapbox: (config: AppConfig) => void;
+};
+
+let real: RealModule | null = null;
+if (!isExpoGo) {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    real = require('./MapCanvasReal') as RealModule;
+  } catch {
+    // No dev-client native module linked yet (e.g. first run after adding
+    // the package, before a prebuild) — fall back to the placeholder below
+    // rather than crashing the screen.
+    real = null;
+  }
 }
 
-interface MapCanvasProps {
-  styleUrl?: string;
-  center?: LatLng | null;
-  pickup?: LatLng | null;
-  pickupLabel?: string | null;
-  drop?: LatLng | null;
-  dropLabel?: string | null;
-  route?: RouteGeometry | null;
-  riderLocation?: LatLng | null;
-  nearby?: LatLng[];
-  dim?: boolean;
+// Called once from AppConfigContext after GET /config resolves. A no-op
+// under Expo Go / before the native module is linked.
+export function configureMapbox(config: AppConfig): void {
+  real?.configureMapbox(config);
 }
 
-// Trims a full Mapbox place_name ("MG Road, Bengaluru, Karnataka 560001,
-// India") down to the headline the reference UI shows next to a pin.
-function shortLabel(label?: string | null): string | null {
-  if (!label) return null;
-  return label.split(',')[0].trim() || null;
+export default function MapCanvas(props: MapCanvasProps) {
+  const Comp = real?.default ?? MapCanvasPlaceholder;
+  return <Comp {...props} />;
 }
-
-export default function MapCanvas({ pickup, pickupLabel, drop, dropLabel, riderLocation, dim }: MapCanvasProps) {
-  return (
-    <View style={styles.fill} pointerEvents="none">
-      <View style={styles.base} />
-      {/* Faint grid so it reads as a map surface, not a blank panel. */}
-      <View style={styles.grid}>
-        {Array.from({ length: 6 }).map((_, i) => (
-          <View key={`h${i}`} style={[styles.gridLine, styles.gridH, { top: `${(i + 1) * 14}%` }]} />
-        ))}
-        {Array.from({ length: 4 }).map((_, i) => (
-          <View key={`v${i}`} style={[styles.gridLine, styles.gridV, { left: `${(i + 1) * 20}%` }]} />
-        ))}
-      </View>
-
-      {/* Indicative markers near the centre — not geographically projected,
-          but labelled with the real place name so it's not just coloured dots. */}
-      <View style={styles.markers}>
-        {pickup ? (
-          <View style={styles.markerGroup}>
-            <View style={[styles.pin, styles.pickupPin]} />
-            {shortLabel(pickupLabel) ? (
-              <View style={styles.labelPill}>
-                <Text style={styles.labelText} numberOfLines={1}>{shortLabel(pickupLabel)}</Text>
-              </View>
-            ) : null}
-          </View>
-        ) : null}
-        {riderLocation ? <View style={[styles.pin, styles.riderPin]} /> : null}
-        {drop ? (
-          <View style={styles.markerGroup}>
-            <View style={[styles.pin, styles.dropPin]} />
-            {shortLabel(dropLabel) ? (
-              <View style={styles.labelPill}>
-                <Text style={styles.labelText} numberOfLines={1}>{shortLabel(dropLabel)}</Text>
-              </View>
-            ) : null}
-          </View>
-        ) : null}
-      </View>
-
-      {dim ? <View style={styles.dim} /> : null}
-    </View>
-  );
-}
-
-const fillObject = { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 } as const;
-
-const styles = StyleSheet.create({
-  fill: { ...fillObject },
-  base: { ...fillObject, backgroundColor: colors.mapBase },
-  grid: { ...fillObject },
-  gridLine: { position: 'absolute', backgroundColor: colors.mapGrid },
-  gridH: { left: 0, right: 0, height: 1 },
-  gridV: { top: 0, bottom: 0, width: 1 },
-  markers: {
-    ...fillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 18,
-  },
-  markerGroup: { alignItems: 'center', gap: 6 },
-  pin: { borderWidth: 3, borderColor: colors.white },
-  pickupPin: { width: 18, height: 18, borderRadius: 9, backgroundColor: colors.accent },
-  dropPin: { width: 16, height: 16, borderRadius: 3, backgroundColor: colors.navy800 },
-  riderPin: { width: 30, height: 30, borderRadius: 10, backgroundColor: colors.navy800 },
-  labelPill: {
-    maxWidth: 110,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
-    backgroundColor: colors.white,
-  },
-  labelText: { fontFamily: font.semibold, fontSize: 10.5, color: colors.navy800 },
-  dim: { ...fillObject, backgroundColor: 'rgba(15,42,71,0.5)' },
-});

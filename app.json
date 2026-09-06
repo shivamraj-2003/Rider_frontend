@@ -7,9 +7,11 @@
     "icon": "./assets/logo.jpeg",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.toprider.app"
     },
     "android": {
+      "package": "com.toprider.app",
       "adaptiveIcon": {
         "backgroundColor": "#0B1F3A",
         "foregroundImage": "./assets/android-icon-foreground.png",

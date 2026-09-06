@@ -138,6 +138,27 @@ export interface SavedPlace extends Place {
   label: string;
 }
 
+// GET /riders/nearby — dots on the customer's pre-booking map.
+export interface NearbyRider {
+  rider_id: string;
+  lat: number;
+  lng: number;
+  heading: number | null;
+  distance_km: number;
+  vehicle_type: VehicleType;
+}
+
+// GET /places/popular — real most-booked drop points near a location,
+// grouped from completed bookings across all customers.
+export interface PopularPlace {
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  trip_count: number;
+  distance_km: number;
+}
+
 // POST /bookings/estimates — one row per vehicle type
 export interface FareEstimate {
   vehicle_type: VehicleType;
@@ -207,6 +228,9 @@ export interface RiderMe {
   bank_account_holder: string | null;
   bank_account_number: string | null;
   bank_ifsc: string | null;
+  licence_doc_path: string | null;
+  rc_doc_path: string | null;
+  aadhaar_doc_path: string | null;
 }
 
 // GET /riders/offers, and the WS `ride_offer` event payload

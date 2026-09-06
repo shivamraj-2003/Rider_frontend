@@ -15,9 +15,10 @@ import type { RidersStackParamList } from '../../../navigation/AdminNavigator';
 type Nav = NativeStackNavigationProp<RidersStackParamList, 'RiderDocuments'>;
 type Rt = RouteProp<RidersStackParamList, 'RiderDocuments'>;
 
-const DOCS: { key: 'licence' | 'rc'; label: string }[] = [
+const DOCS: { key: 'licence' | 'rc' | 'aadhaar'; label: string }[] = [
   { key: 'licence', label: 'Driving Licence' },
   { key: 'rc', label: 'Registration Certificate (RC)' },
+  { key: 'aadhaar', label: 'Aadhaar Card' },
 ];
 
 export default function RiderDocumentsScreen() {
@@ -66,7 +67,7 @@ export default function RiderDocumentsScreen() {
           {DOCS.map((doc) => (
             <SectionCard key={doc.key} title={doc.label}>
               {data[doc.key] ? (
-                <Image source={{ uri: data[doc.key] as string }} style={styles.doc} resizeMode="cover" />
+                <DocImage uri={data[doc.key] as string} />
               ) : (
                 <Text style={styles.missing}>Not uploaded</Text>
               )}
@@ -81,6 +82,25 @@ export default function RiderDocumentsScreen() {
         </>
       ) : null}
     </AdminScreen>
+  );
+}
+
+// A record whose doc_path was set but whose actual file upload never
+// completed (or was corrupted) still returns a valid signed URL — the file
+// just isn't a real image. A plain <Image> fails silently in that case, so
+// this surfaces it instead of leaving admins staring at a blank box.
+function DocImage({ uri }: { uri: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return <Text style={styles.missing}>Could not load this file — it may be missing or corrupted. Ask the rider to re-upload it.</Text>;
+  }
+  return (
+    <Image
+      source={{ uri }}
+      style={styles.doc}
+      resizeMode="cover"
+      onError={() => setFailed(true)}
+    />
   );
 }
 

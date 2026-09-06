@@ -1,5 +1,5 @@
 import React, { PropsWithChildren } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, Pressable, ScrollView, KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { IconArrowLeft } from '@tabler/icons-react-native';
 import { colors, font, radius, space } from '../../../theme';
@@ -33,31 +33,37 @@ export default function WizardStepScaffold({
 }>) {
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <View style={styles.headerRow}>
-          <Pressable onPress={onBack} style={styles.back} hitSlop={8} accessibilityRole="button" accessibilityLabel="Go back">
-            <IconArrowLeft size={20} color={colors.navy800} strokeWidth={2} />
-          </Pressable>
-          <Dots count={totalSteps} index={step} />
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          <View style={styles.headerRow}>
+            <Pressable onPress={onBack} style={styles.back} hitSlop={8} accessibilityRole="button" accessibilityLabel="Go back">
+              <IconArrowLeft size={20} color={colors.navy800} strokeWidth={2} />
+            </Pressable>
+            <Dots count={totalSteps} index={step} />
+          </View>
+
+          <View style={styles.heading}>
+            <Text style={styles.title}>{title}</Text>
+            {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+          </View>
+
+          <View style={styles.body}>{children}</View>
+        </ScrollView>
+
+        <View style={styles.footer}>
+          <Button title={nextLabel} onPress={onNext} loading={nextLoading} disabled={nextDisabled} />
         </View>
-
-        <View style={styles.heading}>
-          <Text style={styles.title}>{title}</Text>
-          {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
-        </View>
-
-        <View style={styles.body}>{children}</View>
-      </ScrollView>
-
-      <View style={styles.footer}>
-        <Button title={nextLabel} onPress={onNext} loading={nextLoading} disabled={nextDisabled} />
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.white },
+  flex: { flex: 1 },
   scroll: { paddingHorizontal: 28, paddingTop: 18, gap: space.xl, flexGrow: 1 },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   back: {

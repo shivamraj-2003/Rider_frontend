@@ -34,7 +34,7 @@ export default function LiveRidesScreen() {
       <View style={styles.map}>
         <MapCanvas
           pickup={withLoc[0] ? { lat: withLoc[0].lat!, lng: withLoc[0].lng! } : null}
-          nearby={withLoc.map((t) => ({ lat: t.lat!, lng: t.lng! }))}
+          nearby={withLoc.map((t) => ({ id: t.booking_id, lat: t.lat!, lng: t.lng! }))}
         />
       </View>
 

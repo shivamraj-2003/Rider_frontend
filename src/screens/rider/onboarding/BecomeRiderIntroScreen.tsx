@@ -5,6 +5,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { IconArrowLeft, IconClock, IconCoin, IconSteeringWheel } from '@tabler/icons-react-native';
 import { colors, font, radius, space } from '../../../theme';
 import Button from '../../../components/Button';
+import { useAuth } from '../../../context/AuthContext';
 import type { BecomeRiderStackParamList } from '../../../navigation/BecomeRiderNavigator';
 
 type Props = NativeStackScreenProps<BecomeRiderStackParamList, 'Intro'>;
@@ -16,11 +17,15 @@ const BENEFITS = [
 ];
 
 export default function BecomeRiderIntroScreen({ navigation }: Props) {
+  const { setIntendedRole } = useAuth();
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.headerRow}>
         <Pressable
-          onPress={() => navigation.goBack()}
+          // This screen is mounted standalone (PostAuthGate), not pushed on
+          // a stack with anything to pop back to — "back" here means "I
+          // didn't mean to pick Rider", so it hands off to the customer app.
+          onPress={() => setIntendedRole('customer')}
           style={styles.back}
           hitSlop={8}
           accessibilityRole="button"

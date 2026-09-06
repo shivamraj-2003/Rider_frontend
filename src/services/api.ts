@@ -69,7 +69,21 @@ async function refreshAccessToken(): Promise<string | null> {
   return refreshing;
 }
 
-async function request<T>(method: string, path: string, body?: unknown, retry = true): Promise<T> {
+interface RequestOptions {
+  // Status codes that are an expected, handled outcome for this call (e.g. a
+  // "does this exist yet" check that treats 404 as a normal answer) - still
+  // throws ApiError as usual, just skips the console.warn so the log isn't
+  // full of "errors" that are actually fine.
+  silentStatuses?: number[];
+}
+
+async function request<T>(
+  method: string,
+  path: string,
+  body?: unknown,
+  retry = true,
+  opts?: RequestOptions
+): Promise<T> {
   const token = await tokenStore.getAccessToken();
 
   let res: Response;
@@ -98,7 +112,7 @@ async function request<T>(method: string, path: string, body?: unknown, retry = 
   // Expired access token: refresh once, then replay the original request.
   if (res.status === 401 && retry && !path.startsWith('/auth/')) {
     const fresh = await refreshAccessToken();
-    if (fresh) return request<T>(method, path, body, false);
+    if (fresh) return request<T>(method, path, body, false, opts);
   }
 
   if (res.status === 204) return undefined as T;
@@ -109,7 +123,7 @@ async function request<T>(method: string, path: string, body?: unknown, retry = 
     // Every response carries X-Request-ID; quoting it makes a bug report
     // answerable in seconds (FRONTEND_INTEGRATION.md §4).
     const requestId = res.headers.get('X-Request-ID') ?? undefined;
-    if (requestId) {
+    if (requestId && !opts?.silentStatuses?.includes(res.status)) {
       console.warn(`[api] ${method} ${path} → ${res.status} ${e.code ?? 'unknown'} (X-Request-ID: ${requestId})`);
     }
     throw new ApiError(e.code ?? 'unknown', e.message ?? 'Something went wrong', res.status, {
@@ -121,7 +135,7 @@ async function request<T>(method: string, path: string, body?: unknown, retry = 
 }
 
 export const api = {
-  get: <T>(path: string) => request<T>('GET', path),
+  get: <T>(path: string, opts?: RequestOptions) => request<T>('GET', path, undefined, true, opts),
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
   patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, body),
   put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body),

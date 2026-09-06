@@ -3,6 +3,7 @@ import { View, Text, FlatList, StyleSheet, ActivityIndicator } from 'react-nativ
 import { IconCoin } from '@tabler/icons-react-native';
 import ScreenScaffold from '../../components/ScreenScaffold';
 import InfoCard from '../../components/InfoCard';
+import GradientCard from '../../components/GradientCard';
 import { getEarningsLedger, getEarningsSummary, getRiderStats } from '../../services/rider';
 import { colors, font, radius, shadow, space } from '../../theme';
 import type { EarningsEntry, EarningsSummary, RiderStats } from '../../types';
@@ -35,14 +36,14 @@ export default function EarningsScreen() {
 
   return (
     <ScreenScaffold title="Earnings">
-      <View style={styles.hero}>
+      <GradientCard style={styles.hero}>
         <View style={styles.heroIcon}>
           <IconCoin size={22} color={colors.accent} strokeWidth={1.75} />
         </View>
         <Text style={styles.heroLabel}>Today's earnings</Text>
         <Text style={styles.heroValue}>₹{(summary?.today ?? 0).toFixed(0)}</Text>
         <Text style={styles.heroSub}>{stats?.trips_today ?? 0} trips today</Text>
-      </View>
+      </GradientCard>
 
       <View style={styles.grid}>
         {[
@@ -81,12 +82,9 @@ export default function EarningsScreen() {
 
 const styles = StyleSheet.create({
   hero: {
-    backgroundColor: colors.navy800,
-    borderRadius: radius.card,
     padding: space.xl,
     alignItems: 'center',
     gap: 4,
-    ...shadow.card,
   },
   heroIcon: {
     width: 44,

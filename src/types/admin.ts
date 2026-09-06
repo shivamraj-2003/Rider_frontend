@@ -96,6 +96,7 @@ export interface RiderDetail {
 export interface RiderDocuments {
   licence: string | null;
   rc: string | null;
+  aadhaar: string | null;
 }
 
 // GET /admin/bookings — BookingOut

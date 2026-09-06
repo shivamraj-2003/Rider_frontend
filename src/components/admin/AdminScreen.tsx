@@ -9,7 +9,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { IconArrowLeft } from '@tabler/icons-react-native';
+import { IconArrowLeft, IconLogout } from '@tabler/icons-react-native';
+import { useAuth } from '../../context/AuthContext';
 import { colors, font, space, radius, type } from '../../theme';
 
 interface Props {
@@ -43,8 +44,25 @@ export default function AdminScreen({
   children,
 }: PropsWithChildren<Props>) {
   const navigation = useNavigation<any>();
+  const { signOut } = useAuth();
   const canGoBack = navigation.canGoBack?.() ?? false;
   const showBack = back ?? canGoBack;
+
+  // Every admin screen gets a way to sign out, same as the customer/rider
+  // ScreenScaffold - a screen with its own `right` action (e.g. "+ Offer")
+  // takes priority over it on that one screen; logout stays reachable from
+  // every other admin screen either way.
+  const rightSlot = right ?? (
+    <Pressable
+      onPress={signOut}
+      hitSlop={10}
+      style={styles.backBtn}
+      accessibilityRole="button"
+      accessibilityLabel="Log out"
+    >
+      <IconLogout size={19} color={colors.navy800} strokeWidth={2} />
+    </Pressable>
+  );
 
   const header = (
     <View style={styles.header}>
@@ -71,7 +89,7 @@ export default function AdminScreen({
           ) : null}
         </View>
       </View>
-      {right ? <View style={styles.right}>{right}</View> : null}
+      <View style={styles.right}>{rightSlot}</View>
     </View>
   );
 

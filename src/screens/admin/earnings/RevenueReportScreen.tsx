@@ -18,7 +18,7 @@ const RANGES = [
 export default function RevenueReportScreen() {
   const [days, setDays] = useState('30');
   const fetcher = useCallback(() => adminApi.getRevenue(Number(days)), [days]);
-  const { data, loading, error, refreshing, onRefresh, refetch } = useAdminQuery(fetcher);
+  const { data, loading, error, refreshing, fetching, onRefresh, refetch } = useAdminQuery(fetcher);
 
   const totals = data?.reduce(
     (acc, r) => ({
@@ -38,6 +38,8 @@ export default function RevenueReportScreen() {
         <LoadingState />
       ) : error && !data ? (
         <ErrorState message={error} onRetry={refetch} />
+      ) : fetching && !refreshing ? (
+        <LoadingState />
       ) : !data || data.length === 0 ? (
         <EmptyState title="No revenue in this window" />
       ) : (

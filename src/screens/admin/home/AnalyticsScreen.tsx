@@ -26,7 +26,7 @@ export default function AnalyticsScreen() {
     () => Promise.all([adminApi.getReportsSummary(Number(days)), adminApi.getRevenue(Number(days))]),
     [days]
   );
-  const { data, loading, error, refreshing, onRefresh, refetch } = useAdminQuery(fetcher);
+  const { data, loading, error, refreshing, fetching, onRefresh, refetch } = useAdminQuery(fetcher);
 
   return (
     <AdminScreen title="Analytics" refreshing={refreshing} onRefresh={onRefresh}>
@@ -36,6 +36,8 @@ export default function AnalyticsScreen() {
         <LoadingState />
       ) : error && !data ? (
         <ErrorState message={error} onRetry={refetch} />
+      ) : fetching && !refreshing ? (
+        <LoadingState />
       ) : data ? (
         (() => {
           const [summary, revenue] = data;

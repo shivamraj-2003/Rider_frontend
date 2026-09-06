@@ -40,7 +40,7 @@ export default function UsersListScreen() {
       }),
     [role, q]
   );
-  const { data, loading, error, refreshing, onRefresh, refetch } = useAdminQuery(fetcher);
+  const { data, loading, error, refreshing, fetching, onRefresh, refetch } = useAdminQuery(fetcher);
 
   return (
     <AdminScreen title="Users" back={false} refreshing={refreshing} onRefresh={onRefresh}>
@@ -53,6 +53,8 @@ export default function UsersListScreen() {
         <LoadingState />
       ) : error && !data ? (
         <ErrorState message={error} onRetry={refetch} />
+      ) : fetching && !refreshing ? (
+        <LoadingState />
       ) : !data || data.length === 0 ? (
         <EmptyState title="No users found" hint={q ? 'Try a different search.' : undefined} />
       ) : (

@@ -27,7 +27,7 @@ export default function ReportsScreen() {
   const navigation = useNavigation<Nav>();
   const [days, setDays] = useState('30');
   const fetcher = useCallback(() => adminApi.getReportsSummary(Number(days)), [days]);
-  const { data, loading, error, refreshing, onRefresh, refetch } = useAdminQuery(fetcher);
+  const { data, loading, error, refreshing, fetching, onRefresh, refetch } = useAdminQuery(fetcher);
 
   return (
     <AdminScreen title="Reports" refreshing={refreshing} onRefresh={onRefresh}>
@@ -37,6 +37,8 @@ export default function ReportsScreen() {
         <LoadingState />
       ) : error && !data ? (
         <ErrorState message={error} onRetry={refetch} />
+      ) : fetching && !refreshing ? (
+        <LoadingState />
       ) : data ? (
         <>
           <StatGrid>

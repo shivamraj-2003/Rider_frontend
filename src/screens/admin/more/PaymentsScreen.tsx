@@ -25,7 +25,7 @@ export default function PaymentsScreen() {
     () => adminApi.getPayments({ status: tab === 'all' ? undefined : tab, limit: 100 }),
     [tab]
   );
-  const { data, loading, error, refreshing, onRefresh, refetch } = useAdminQuery(fetcher);
+  const { data, loading, error, refreshing, fetching, onRefresh, refetch } = useAdminQuery(fetcher);
 
   return (
     <AdminScreen title="Payments" refreshing={refreshing} onRefresh={onRefresh}>
@@ -37,6 +37,8 @@ export default function PaymentsScreen() {
         <LoadingState />
       ) : error && !data ? (
         <ErrorState message={error} onRetry={refetch} />
+      ) : fetching && !refreshing ? (
+        <LoadingState />
       ) : !data || data.length === 0 ? (
         <EmptyState title="No payments" />
       ) : (

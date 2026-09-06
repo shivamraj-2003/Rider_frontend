@@ -1,9 +1,10 @@
-import React from 'react';
-import { View, Text, Pressable, Animated, StyleSheet, StyleProp, ViewStyle } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Pressable, Animated, StyleSheet, StyleProp, ViewStyle, LayoutChangeEvent } from 'react-native';
 import type { TablerIcon as Icon } from '../types/icon';
 import { colors, type, radius, shadow, font } from '../theme';
 import { rupees } from '../types';
 import { useSwipeDismiss } from '../hooks/useSwipeDismiss';
+import { useSwipeCollapse } from '../hooks/useSwipeCollapse';
 
 // Booking-flow UI primitives (Phase 2). Grouped in one file because they are
 // only used together across the five booking screens; the app's generic
@@ -16,18 +17,40 @@ export function Sheet({
   children,
   style,
   onDismiss,
+  peek,
 }: {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   // Drag the sheet down past a threshold (or flick it down) to close it —
-  // e.g. navigation.goBack(). Omit on a sheet with nowhere to go back to
-  // (the Home tab's own "Where are you going?" sheet).
+  // e.g. navigation.goBack().
   onDismiss?: () => void;
+  // For a sheet with nowhere to go back to (the Home tab's own "Where are
+  // you going?" sheet) — dragging it down peeks it to just the grab handle
+  // so more map shows, instead of navigating anywhere. Ignored if onDismiss
+  // is also passed.
+  peek?: boolean;
 }) {
-  const { panHandlers, style: dragStyle } = useSwipeDismiss(onDismiss);
+  const [height, setHeight] = useState(0);
+  const dismissGesture = useSwipeDismiss(onDismiss);
+  const collapseGesture = useSwipeCollapse(height);
+  const usingPeek = !!peek && !onDismiss;
+
+  const panHandlers = onDismiss ? dismissGesture.panHandlers : usingPeek ? collapseGesture.panHandlers : {};
+  const dragStyle = onDismiss ? dismissGesture.style : usingPeek ? collapseGesture.style : null;
+
+  const onLayout = (e: LayoutChangeEvent) => {
+    if (usingPeek) setHeight(e.nativeEvent.layout.height);
+  };
+
   return (
-    <Animated.View style={[s.sheet, style, onDismiss ? dragStyle : null]} {...panHandlers}>
-      <View style={s.grab} />
+    <Animated.View style={[s.sheet, style, dragStyle]} onLayout={onLayout}>
+      <Pressable
+        style={s.grabZone}
+        onPress={usingPeek && collapseGesture.collapsed ? collapseGesture.expand : undefined}
+        {...panHandlers}
+      >
+        <View style={s.grab} />
+      </Pressable>
       {children}
     </Animated.View>
   );
@@ -280,7 +303,8 @@ const s = StyleSheet.create({
     gap: 16,
     ...shadow.sheet,
   },
-  grab: { width: 44, height: 5, borderRadius: 3, backgroundColor: colors.line300, alignSelf: 'center' },
+  grabZone: { alignItems: 'center', marginHorizontal: -22, paddingVertical: 4 },
+  grab: { width: 44, height: 5, borderRadius: 3, backgroundColor: colors.line300 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -161,7 +161,7 @@ export default function CustomerHomeScreen({ navigation }: Props) {
         ) : null}
 
         <View style={styles.sheetWrap}>
-          <Sheet>
+          <Sheet peek>
             <Text style={styles.title}>{bookingOff ? 'Booking paused' : 'Where are you going?'}</Text>
 
             {bookingOff ? (

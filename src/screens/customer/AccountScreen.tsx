@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
-import { IconBell, IconChevronRight, IconMapPin, IconShieldCheck } from '@tabler/icons-react-native';
+import { IconBell, IconChevronRight, IconMapPin, IconShieldCheck, IconSteeringWheel } from '@tabler/icons-react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
@@ -10,7 +10,7 @@ import InfoCard from '../../components/InfoCard';
 import Button from '../../components/Button';
 import { useAuth, ApiError } from '../../context/AuthContext';
 import { getRiderMe } from '../../services/rider';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, font, radius, shadow, space } from '../../theme';
 import type { RiderMe } from '../../types';
 import type { CustomerStackParamList, CustomerTabParamList } from '../../navigation/CustomerNavigator';
 
@@ -53,19 +53,41 @@ export default function AccountScreen({ navigation }: Props) {
     }
   };
 
+  const initial = (user?.full_name?.trim()?.[0] ?? user?.phone?.slice(-2)?.[0] ?? '?').toUpperCase();
+
   return (
     <ScreenScaffold title="Account">
-      <InfoCard label="Name" value={user?.full_name ?? '—'} />
-      <InfoCard label="Phone" value={user?.phone ?? '—'} />
-      <InfoCard label="Email" value={user?.email ?? '—'} />
+      <View style={styles.profileCard}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarLabel}>{initial}</Text>
+        </View>
+        <View style={styles.profileBody}>
+          <Text style={styles.profileName}>{user?.full_name ?? 'Add your name'}</Text>
+          <Text style={styles.profileSub}>{user?.phone ?? '—'}</Text>
+        </View>
+      </View>
+
+      <View style={styles.infoRow}>
+        <View style={styles.infoHalf}><InfoCard label="Phone" value={user?.phone ?? '—'} /></View>
+        <View style={styles.infoHalf}><InfoCard label="Email" value={user?.email ?? '—'} /></View>
+      </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Riding for Top Rider</Text>
 
         {riderMe === undefined ? (
-          <ActivityIndicator color={colors.primary} />
+          <ActivityIndicator color={colors.accentDark} />
         ) : riderMe === null ? (
-          <Button title="Become a Rider" variant="navy" onPress={() => navigation.navigate('BecomeRider')} />
+          <Pressable style={styles.riderCta} onPress={() => navigation.navigate('BecomeRider')}>
+            <View style={styles.riderCtaIcon}>
+              <IconSteeringWheel size={22} color={colors.accentDark} strokeWidth={1.75} />
+            </View>
+            <View style={styles.riderCtaBody}>
+              <Text style={styles.riderCtaTitle}>Become a Rider</Text>
+              <Text style={styles.riderCtaSub}>Earn on your own schedule</Text>
+            </View>
+            <IconChevronRight size={18} color={colors.ink400} strokeWidth={1.75} />
+          </Pressable>
         ) : riderMe.status === 'approved' ? (
           <Button title="Switch to Rider Mode" variant="navy" onPress={handleSwitchToRider} loading={switching} />
         ) : (
@@ -79,7 +101,7 @@ export default function AccountScreen({ navigation }: Props) {
       <View style={styles.menu}>
         <MenuRow icon={IconMapPin} label="Saved places" onPress={() => navigation.navigate('SavedPlaces')} />
         <MenuRow icon={IconBell} label="Notifications" onPress={() => navigation.navigate('Notifications')} />
-        <MenuRow icon={IconShieldCheck} label="Safety · Emergency contacts" onPress={() => navigation.navigate('EmergencyContacts')} />
+        <MenuRow icon={IconShieldCheck} label="Safety · Emergency contacts" onPress={() => navigation.navigate('EmergencyContacts')} last />
       </View>
     </ScreenScaffold>
   );
@@ -89,40 +111,102 @@ function MenuRow({
   icon: Icon,
   label,
   onPress,
+  last,
 }: {
   icon: typeof IconMapPin;
   label: string;
   onPress: () => void;
+  last?: boolean;
 }) {
   return (
-    <Pressable style={styles.menuRow} onPress={onPress} accessibilityRole="button">
-      <Icon size={20} color={colors.textSecondary} strokeWidth={1.75} />
+    <Pressable style={[styles.menuRow, last && styles.menuRowLast]} onPress={onPress} accessibilityRole="button">
+      <View style={styles.menuIcon}>
+        <Icon size={18} color={colors.navy600} strokeWidth={1.75} />
+      </View>
       <Text style={styles.menuLabel}>{label}</Text>
-      <IconChevronRight size={18} color={colors.textSecondary} strokeWidth={1.75} />
+      <IconChevronRight size={18} color={colors.ink400} strokeWidth={1.75} />
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  section: { gap: spacing.sm, marginTop: spacing.md },
-  sectionTitle: { ...typography.label, color: colors.textSecondary },
-  noticeCard: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.lg,
+  profileCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    backgroundColor: colors.white,
+    borderRadius: radius.card,
+    padding: space.lg,
+    ...shadow.card,
   },
-  noticeText: { ...typography.body, color: colors.textPrimary },
-  error: { ...typography.caption, color: colors.danger },
-  menu: { marginTop: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 20,
+    backgroundColor: colors.navy800,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarLabel: { fontFamily: font.extrabold, fontSize: 22, color: colors.white },
+  profileBody: { flex: 1, gap: 2 },
+  profileName: { fontFamily: font.extrabold, fontSize: 18, color: colors.navy800 },
+  profileSub: { fontFamily: font.regular, fontSize: 13.5, color: colors.ink600 },
+  infoRow: { flexDirection: 'row', gap: space.md },
+  infoHalf: { flex: 1 },
+  section: { gap: space.sm, marginTop: space.sm },
+  sectionTitle: { fontFamily: font.bold, fontSize: 13, letterSpacing: 0.2, color: colors.ink600 },
+  riderCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    backgroundColor: colors.white,
+    borderRadius: radius.card,
+    padding: space.md,
+    ...shadow.card,
+  },
+  riderCtaIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.tile,
+    backgroundColor: colors.accentTint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  riderCtaBody: { flex: 1, gap: 2 },
+  riderCtaTitle: { fontFamily: font.bold, fontSize: 15.5, color: colors.navy800 },
+  riderCtaSub: { fontFamily: font.regular, fontSize: 12.5, color: colors.ink600 },
+  noticeCard: {
+    backgroundColor: colors.white,
+    borderRadius: radius.card,
+    padding: space.lg,
+    ...shadow.card,
+  },
+  noticeText: { fontFamily: font.regular, fontSize: 14, lineHeight: 21, color: colors.navy800 },
+  error: { fontFamily: font.medium, fontSize: 13, color: colors.danger },
+  menu: {
+    marginTop: space.sm,
+    borderRadius: radius.card,
+    backgroundColor: colors.white,
+    overflow: 'hidden',
+    ...shadow.card,
+  },
   menuRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.lg,
+    gap: space.md,
+    paddingHorizontal: space.lg,
+    paddingVertical: space.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.line100,
   },
-  menuLabel: { ...typography.bodyStrong, color: colors.textPrimary, flex: 1 },
+  menuRowLast: { borderBottomWidth: 0 },
+  menuIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.tile,
+    backgroundColor: colors.surface100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuLabel: { fontFamily: font.semibold, fontSize: 14.5, color: colors.navy800, flex: 1 },
 });

@@ -13,6 +13,7 @@ import WizardStepScaffold from './WizardStepScaffold';
 type Props = NativeStackScreenProps<BecomeRiderStackParamList, 'VehicleDetails'>;
 
 const VEHICLE_TYPES: VehicleType[] = ['bike', 'auto', 'car'];
+const AADHAAR_RE = /^\d{12}$/;
 
 export default function RiderVehicleDetailsScreen({ navigation }: Props) {
   const { data, update } = useBecomeRiderWizard();
@@ -25,6 +26,11 @@ export default function RiderVehicleDetailsScreen({ navigation }: Props) {
     }
     if (!data.licence_number.trim()) {
       setError('Enter your driving licence number');
+      return;
+    }
+    // Aadhaar is mandatory KYC for every rider — no onboarding without it.
+    if (!AADHAAR_RE.test(data.aadhaar_number.trim())) {
+      setError('Enter a valid 12-digit Aadhaar number');
       return;
     }
     setError(null);
@@ -78,6 +84,14 @@ export default function RiderVehicleDetailsScreen({ navigation }: Props) {
         autoCapitalize="characters"
         value={data.licence_number}
         onChangeText={(t) => update({ licence_number: t })}
+      />
+      <TextField
+        label="Aadhaar number"
+        placeholder="12-digit Aadhaar number"
+        keyboardType="number-pad"
+        maxLength={12}
+        value={data.aadhaar_number}
+        onChangeText={(t) => update({ aadhaar_number: t.replace(/\D/g, '') })}
       />
       {error ? <Text style={styles.error}>{error}</Text> : null}
     </WizardStepScaffold>

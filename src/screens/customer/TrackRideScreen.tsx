@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable, Alert, Share, StyleSheet, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { IconAlertTriangle, IconShare } from '@tabler/icons-react-native';
+import { IconAlertTriangle, IconMapPin, IconShare } from '@tabler/icons-react-native';
 import Button from '../../components/Button';
 import TextField from '../../components/TextField';
 import { useAppConfig } from '../../context/AppConfigContext';
@@ -10,7 +11,7 @@ import { useBookingSocket } from '../../hooks/useBookingSocket';
 import { cancelBooking, getLiveBooking } from '../../services/customer';
 import { raiseAlert, shareTrip, stopSharingTrip } from '../../services/safety';
 import { ApiError } from '../../services/api';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, font, radius, shadow, space } from '../../theme';
 import { TERMINAL_BOOKING_STATUSES } from '../../types';
 import type { BookingLive } from '../../types';
 import type { CustomerStackParamList } from '../../navigation/CustomerNavigator';
@@ -124,13 +125,17 @@ export default function TrackRideScreen({ route, navigation }: Props) {
   const isTerminal = live ? TERMINAL_BOOKING_STATUSES.includes(live.status) : false;
   const canCancel = live ? !isTerminal : false;
   const canShareOrSos = live ? !isTerminal && live.status !== 'requested' : false;
+  const insets = useSafeAreaInsets();
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={[styles.container, { paddingTop: insets.top + space.lg }]}
+    >
       <Text style={styles.title}>Your ride</Text>
 
       {!live ? (
-        <ActivityIndicator color={colors.primary} />
+        <ActivityIndicator color={colors.accentDark} />
       ) : (
         <>
           <View style={styles.statusCard}>
@@ -139,9 +144,12 @@ export default function TrackRideScreen({ route, navigation }: Props) {
               <Text style={styles.eta}>ETA: {live.eta_minutes} min</Text>
             ) : null}
             {live.rider_location ? (
-              <Text style={styles.location}>
-                Rider at {live.rider_location.lat.toFixed(4)}, {live.rider_location.lng.toFixed(4)}
-              </Text>
+              <View style={styles.locationRow}>
+                <IconMapPin size={14} color={colors.accent} strokeWidth={2} />
+                <Text style={styles.location}>
+                  Rider at {live.rider_location.lat.toFixed(4)}, {live.rider_location.lng.toFixed(4)}
+                </Text>
+              </View>
             ) : !isTerminal ? (
               <Text style={styles.location}>Locating rider…</Text>
             ) : null}
@@ -188,34 +196,35 @@ export default function TrackRideScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.background },
-  container: { padding: spacing.xl, gap: spacing.lg },
-  title: { ...typography.h2, color: colors.primary },
+  screen: { flex: 1, backgroundColor: colors.surface50 },
+  container: { padding: space.xl, gap: space.lg },
+  title: { fontFamily: font.extrabold, fontSize: 24, letterSpacing: -0.4, color: colors.navy800 },
   statusCard: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    padding: spacing.xl,
-    gap: spacing.xs,
+    backgroundColor: colors.navy800,
+    borderRadius: radius.card,
+    padding: space.xl,
+    gap: 6,
+    ...shadow.card,
   },
-  statusText: { ...typography.h3, color: colors.textInverse },
-  eta: { ...typography.body, color: colors.textInverse },
-  location: { ...typography.caption, color: colors.accent },
-  error: { ...typography.caption, color: colors.danger },
-  cancelSection: { gap: spacing.md },
-  safetyRow: { flexDirection: 'row', gap: spacing.md },
+  statusText: { fontFamily: font.extrabold, fontSize: 18, color: colors.white },
+  eta: { fontFamily: font.semibold, fontSize: 14.5, color: colors.accent },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  location: { fontFamily: font.regular, fontSize: 12.5, color: 'rgba(255,255,255,0.7)' },
+  error: { fontFamily: font.medium, fontSize: 13, color: colors.danger },
+  cancelSection: { gap: space.md },
+  safetyRow: { flexDirection: 'row', gap: space.md },
   safetyButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
+    gap: space.sm,
+    paddingVertical: space.md,
+    borderRadius: radius.card,
+    backgroundColor: colors.white,
+    ...shadow.card,
   },
-  sosButton: { borderColor: colors.danger },
-  safetyLabel: { ...typography.bodyStrong, color: colors.primary },
+  sosButton: {},
+  safetyLabel: { fontFamily: font.bold, fontSize: 14, color: colors.navy800 },
   sosLabel: { color: colors.danger },
 });

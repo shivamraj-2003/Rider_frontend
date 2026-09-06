@@ -7,11 +7,13 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import ScreenScaffold from '../../components/ScreenScaffold';
 import InfoCard from '../../components/InfoCard';
 import RideOfferModal from '../../components/RideOfferModal';
+import { GlyphTile } from '../../components/booking';
 import { useAppConfig } from '../../context/AppConfigContext';
 import { useRiderSocket } from '../../hooks/useRiderSocket';
 import { acceptOffer, getPendingOffers, getRiderMe, rejectOffer, sendLocationPing, setAvailability } from '../../services/rider';
 import { ApiError } from '../../services/api';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, font, radius, shadow, space } from '../../theme';
+import { VEHICLE_META } from '../../types';
 import type { RiderMe, RideOffer } from '../../types';
 import type { RiderStackParamList, RiderTabParamList } from '../../navigation/RiderNavigator';
 
@@ -153,20 +155,40 @@ export default function AvailabilityScreen({ navigation }: Props) {
   if (loadingProfile || !riderMe) {
     return (
       <ScreenScaffold title="Rider Home">
-        <ActivityIndicator color={colors.primary} />
+        <ActivityIndicator color={colors.accentDark} />
       </ScreenScaffold>
     );
   }
 
+  const meta = VEHICLE_META[riderMe.vehicle_type];
+
   return (
     <ScreenScaffold title="Rider Home" subtitle="Go online to receive ride requests">
-      <View style={styles.toggleRow}>
-        <Text style={styles.toggleLabel}>{isOnline ? 'Online' : 'Offline'}</Text>
-        <Switch value={isOnline} onValueChange={handleToggle} disabled={toggling} />
+      <View style={[styles.hero, isOnline && styles.heroOnline]}>
+        <View style={styles.heroTop}>
+          <GlyphTile icon={meta.icon} tone={isOnline ? 'accent' : 'dark'} />
+          <View style={styles.heroBody}>
+            <Text style={[styles.heroStatus, isOnline && styles.heroStatusOnline]}>
+              {isOnline ? 'You’re online' : 'You’re offline'}
+            </Text>
+            <Text style={[styles.heroSub, isOnline && styles.heroSubOnline]}>
+              {meta.label} · {riderMe.vehicle_number ?? '—'}
+            </Text>
+          </View>
+          <Switch
+            value={isOnline}
+            onValueChange={handleToggle}
+            disabled={toggling}
+            trackColor={{ true: colors.accent, false: colors.line300 }}
+          />
+        </View>
       </View>
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <InfoCard label="Vehicle" value={`${riderMe.vehicle_type} · ${riderMe.vehicle_number ?? '—'}`} />
-      <InfoCard label="Rating" value={riderMe.rating != null ? riderMe.rating.toFixed(1) : '—'} />
+
+      <View style={styles.statsRow}>
+        <View style={styles.statHalf}><InfoCard label="Rating" value={riderMe.rating != null ? riderMe.rating.toFixed(1) : '—'} /></View>
+        <View style={styles.statHalf}><InfoCard label="Total trips" value={String(riderMe.total_trips)} /></View>
+      </View>
 
       <RideOfferModal
         offer={offer}
@@ -180,16 +202,20 @@ export default function AvailabilityScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  toggleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
+  hero: {
+    backgroundColor: colors.white,
+    borderRadius: radius.card,
+    padding: space.lg,
+    ...shadow.card,
   },
-  toggleLabel: { ...typography.bodyStrong, color: colors.textPrimary },
-  error: { ...typography.caption, color: colors.danger },
+  heroOnline: { backgroundColor: colors.navy800 },
+  heroTop: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  heroBody: { flex: 1, gap: 2 },
+  heroStatus: { fontFamily: font.extrabold, fontSize: 17, color: colors.navy800 },
+  heroStatusOnline: { color: colors.white },
+  heroSub: { fontFamily: font.regular, fontSize: 13, color: colors.ink600 },
+  heroSubOnline: { color: 'rgba(255,255,255,0.7)' },
+  statsRow: { flexDirection: 'row', gap: space.md },
+  statHalf: { flex: 1 },
+  error: { fontFamily: font.medium, fontSize: 13, color: colors.danger },
 });

@@ -18,7 +18,7 @@ export default function RiderDocumentsScreen({ navigation }: Props) {
   const { data, update } = useBecomeRiderWizard();
   const [error, setError] = useState<string | null>(null);
 
-  const pick = async (field: 'licenceDoc' | 'rcDoc') => {
+  const pick = async (field: 'licenceDoc' | 'rcDoc' | 'aadhaarDoc') => {
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
     if (result.canceled || !result.assets[0]) return;
     const asset = result.assets[0];
@@ -27,8 +27,9 @@ export default function RiderDocumentsScreen({ navigation }: Props) {
   };
 
   const handleNext = () => {
-    if (!data.licenceDoc || !data.rcDoc) {
-      setError('Add both your licence and vehicle registration photos');
+    // Aadhaar is mandatory KYC, same as the licence and RC photos.
+    if (!data.licenceDoc || !data.rcDoc || !data.aadhaarDoc) {
+      setError('Add your licence, vehicle registration, and Aadhaar photos');
       return;
     }
     setError(null);
@@ -53,6 +54,11 @@ export default function RiderDocumentsScreen({ navigation }: Props) {
         label="Vehicle registration (RC)"
         doc={data.rcDoc}
         onPick={() => pick('rcDoc')}
+      />
+      <DocumentPicker
+        label="Aadhaar card"
+        doc={data.aadhaarDoc}
+        onPick={() => pick('aadhaarDoc')}
       />
       {error ? <Text style={styles.error}>{error}</Text> : null}
     </WizardStepScaffold>

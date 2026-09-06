@@ -4,9 +4,17 @@ import type { Session, UserOut } from '../types';
 
 type AuthStatus = 'loading' | 'signed-out' | 'needs-profile' | 'signed-in';
 
+// The account type picked on PhoneLoginScreen, before OTP — plain in-memory
+// UI state (not persisted), consumed once by PostAuthGate right after a
+// fresh sign-in to route into the matching flow. A restored session (cold
+// start) never sets this, so a returning user just resumes their last role.
+export type IntendedRole = 'customer' | 'rider';
+
 interface AuthContextValue {
   status: AuthStatus;
   user: UserOut | null;
+  intendedRole: IntendedRole | null;
+  setIntendedRole: (role: IntendedRole) => void;
   sendOtp: (phone: string) => Promise<{ expires_in: number; resend_in: number }>;
   verifyOtp: (phone: string, code: string) => Promise<Session>;
   completeProfile: (full_name: string, email?: string) => Promise<void>;
@@ -20,6 +28,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: PropsWithChildren) {
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [user, setUser] = useState<UserOut | null>(null);
+  const [intendedRole, setIntendedRole] = useState<IntendedRole | null>(null);
 
   const applySession = (session: Session) => {
     setUser(session.user);
@@ -30,6 +39,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setOnSignedOut(() => {
       setUser(null);
       setStatus('signed-out');
+      setIntendedRole(null);
     });
 
     (async () => {
@@ -80,6 +90,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     await tokenStore.clear();
     setUser(null);
     setStatus('signed-out');
+    setIntendedRole(null);
   };
 
   const refreshUser = async () => {
@@ -96,8 +107,19 @@ export function AuthProvider({ children }: PropsWithChildren) {
   };
 
   const value = useMemo(
-    () => ({ status, user, sendOtp, verifyOtp, completeProfile, signOut, refreshUser, switchRole }),
-    [status, user]
+    () => ({
+      status,
+      user,
+      intendedRole,
+      setIntendedRole,
+      sendOtp,
+      verifyOtp,
+      completeProfile,
+      signOut,
+      refreshUser,
+      switchRole,
+    }),
+    [status, user, intendedRole]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -15,12 +15,13 @@ import type { RiderMe } from '../../types';
 // RiderNavigator's gate only ever mounts this screen once RiderProfile.status
 // === 'approved', so this is a read-only profile view, not an onboarding
 // form — onboarding lives in the "Become a Rider" wizard (BecomeRiderNavigator).
+// The User and Rider flows are fully separate now: there is no in-session
+// mode switch, only ScreenScaffold's logout — a rider who wants the customer
+// app signs out and picks "User" on the next login.
 export default function RiderProfileScreen() {
-  const { user, switchRole } = useAuth();
+  const { user } = useAuth();
   const [riderMe, setRiderMe] = useState<RiderMe | null>(null);
   const [loading, setLoading] = useState(true);
-  const [switching, setSwitching] = useState(false);
-  const [switchError, setSwitchError] = useState<string | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -31,17 +32,6 @@ export default function RiderProfileScreen() {
   };
 
   useEffect(load, []);
-
-  const handleSwitchToUser = async () => {
-    setSwitchError(null);
-    setSwitching(true);
-    try {
-      await switchRole('customer');
-    } catch (err) {
-      setSwitching(false);
-      setSwitchError(err instanceof ApiError ? err.message : 'Could not switch to User Mode.');
-    }
-  };
 
   const initial = (user?.full_name?.trim()?.[0] ?? '?').toUpperCase();
 
@@ -62,11 +52,6 @@ export default function RiderProfileScreen() {
       ) : riderMe ? (
         <RiderDetails riderMe={riderMe} onDocumentsUploaded={load} />
       ) : null}
-
-      <View style={styles.section}>
-        <Button title="Switch to User Mode" variant="navy" onPress={handleSwitchToUser} loading={switching} />
-        {switchError ? <Text style={styles.error}>{switchError}</Text> : null}
-      </View>
     </ScreenScaffold>
   );
 }

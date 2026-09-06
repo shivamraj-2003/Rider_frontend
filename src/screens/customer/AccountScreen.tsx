@@ -1,17 +1,13 @@
-import React, { useCallback, useState } from 'react';
-import { View, Text, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
-import { IconBell, IconChevronRight, IconMapPin, IconShieldCheck, IconSteeringWheel } from '@tabler/icons-react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import React from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { IconBell, IconChevronRight, IconMapPin, IconShieldCheck } from '@tabler/icons-react-native';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import ScreenScaffold from '../../components/ScreenScaffold';
 import InfoCard from '../../components/InfoCard';
-import Button from '../../components/Button';
-import { useAuth, ApiError } from '../../context/AuthContext';
-import { getRiderMe } from '../../services/rider';
+import { useAuth } from '../../context/AuthContext';
 import { colors, font, radius, shadow, space } from '../../theme';
-import type { RiderMe } from '../../types';
 import type { CustomerStackParamList, CustomerTabParamList } from '../../navigation/CustomerNavigator';
 
 type Props = CompositeScreenProps<
@@ -19,40 +15,8 @@ type Props = CompositeScreenProps<
   NativeStackScreenProps<CustomerStackParamList>
 >;
 
-const STATUS_COPY: Record<string, string> = {
-  pending_verification: 'Your application is being reviewed. We’ll let you know once it’s approved.',
-  rejected: 'Your rider application wasn’t approved. Contact support for details.',
-  suspended: 'Your rider account is currently suspended.',
-};
-
 export default function AccountScreen({ navigation }: Props) {
-  const { user, switchRole } = useAuth();
-  const [riderMe, setRiderMe] = useState<RiderMe | null | undefined>(undefined); // undefined = loading
-  const [switching, setSwitching] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadRiderStatus = useCallback(() => {
-    getRiderMe()
-      .then(setRiderMe)
-      .catch(() => setRiderMe(null));
-  }, []);
-
-  // Re-check on every focus: a rider application submitted elsewhere, or an
-  // admin decision, should reflect here without a manual refresh.
-  useFocusEffect(loadRiderStatus);
-
-  const handleSwitchToRider = async () => {
-    setError(null);
-    setSwitching(true);
-    try {
-      await switchRole('rider');
-      // AuthContext.user.role flips → RootNavigator swaps to RiderNavigator.
-    } catch (err) {
-      setSwitching(false);
-      setError(err instanceof ApiError ? err.message : 'Could not switch to Rider Mode.');
-    }
-  };
-
+  const { user } = useAuth();
   const initial = (user?.full_name?.trim()?.[0] ?? user?.phone?.slice(-2)?.[0] ?? '?').toUpperCase();
 
   return (
@@ -70,32 +34,6 @@ export default function AccountScreen({ navigation }: Props) {
       <View style={styles.infoRow}>
         <View style={styles.infoHalf}><InfoCard label="Phone" value={user?.phone ?? '—'} /></View>
         <View style={styles.infoHalf}><InfoCard label="Email" value={user?.email ?? '—'} /></View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Riding for Top Rider</Text>
-
-        {riderMe === undefined ? (
-          <ActivityIndicator color={colors.accentDark} />
-        ) : riderMe === null ? (
-          <Pressable style={styles.riderCta} onPress={() => navigation.navigate('BecomeRider')}>
-            <View style={styles.riderCtaIcon}>
-              <IconSteeringWheel size={22} color={colors.accentDark} strokeWidth={1.75} />
-            </View>
-            <View style={styles.riderCtaBody}>
-              <Text style={styles.riderCtaTitle}>Become a Rider</Text>
-              <Text style={styles.riderCtaSub}>Earn on your own schedule</Text>
-            </View>
-            <IconChevronRight size={18} color={colors.ink400} strokeWidth={1.75} />
-          </Pressable>
-        ) : riderMe.status === 'approved' ? (
-          <Button title="Switch to Rider Mode" variant="navy" onPress={handleSwitchToRider} loading={switching} />
-        ) : (
-          <View style={styles.noticeCard}>
-            <Text style={styles.noticeText}>{STATUS_COPY[riderMe.status] ?? riderMe.status}</Text>
-          </View>
-        )}
-        {error ? <Text style={styles.error}>{error}</Text> : null}
       </View>
 
       <View style={styles.menu}>
@@ -153,36 +91,6 @@ const styles = StyleSheet.create({
   profileSub: { fontFamily: font.regular, fontSize: 13.5, color: colors.ink600 },
   infoRow: { flexDirection: 'row', gap: space.md },
   infoHalf: { flex: 1 },
-  section: { gap: space.sm, marginTop: space.sm },
-  sectionTitle: { fontFamily: font.bold, fontSize: 13, letterSpacing: 0.2, color: colors.ink600 },
-  riderCta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.md,
-    backgroundColor: colors.white,
-    borderRadius: radius.card,
-    padding: space.md,
-    ...shadow.card,
-  },
-  riderCtaIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.tile,
-    backgroundColor: colors.accentTint,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  riderCtaBody: { flex: 1, gap: 2 },
-  riderCtaTitle: { fontFamily: font.bold, fontSize: 15.5, color: colors.navy800 },
-  riderCtaSub: { fontFamily: font.regular, fontSize: 12.5, color: colors.ink600 },
-  noticeCard: {
-    backgroundColor: colors.white,
-    borderRadius: radius.card,
-    padding: space.lg,
-    ...shadow.card,
-  },
-  noticeText: { fontFamily: font.regular, fontSize: 14, lineHeight: 21, color: colors.navy800 },
-  error: { fontFamily: font.medium, fontSize: 13, color: colors.danger },
   menu: {
     marginTop: space.sm,
     borderRadius: radius.card,

@@ -3,6 +3,7 @@ import {
   View,
   Text,
   Image,
+  Pressable,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
@@ -10,8 +11,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { IconCar, IconSteeringWheel } from '@tabler/icons-react-native';
 import { useAuth, ApiError } from '../../context/AuthContext';
-import { colors, type, font, space } from '../../theme';
+import type { IntendedRole } from '../../context/AuthContext';
+import { colors, type, font, radius, space } from '../../theme';
 import Button from '../../components/Button';
 import PhoneField from '../../components/PhoneField';
 import type { AuthStackParamList } from '../../navigation/AuthNavigator';
@@ -27,10 +30,11 @@ function toE164(digits: string): string | null {
 }
 
 export default function PhoneLoginScreen({ navigation }: Props) {
-  const { sendOtp } = useAuth();
+  const { sendOtp, intendedRole, setIntendedRole } = useAuth();
   const [phone, setPhone] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const role: IntendedRole = intendedRole ?? 'customer';
 
   const valid = phone.length === 10;
 
@@ -61,9 +65,28 @@ export default function PhoneLoginScreen({ navigation }: Props) {
         <View style={styles.body}>
           <Image source={require('../../../assets/logo.png')} style={styles.lockup} resizeMode="contain" />
 
+          <View style={styles.roleToggle}>
+            <RoleTab
+              icon={IconCar}
+              label="User"
+              selected={role === 'customer'}
+              onPress={() => setIntendedRole('customer')}
+            />
+            <RoleTab
+              icon={IconSteeringWheel}
+              label="Rider"
+              selected={role === 'rider'}
+              onPress={() => setIntendedRole('rider')}
+            />
+          </View>
+
           <View style={styles.heading}>
             <Text style={type.screenTitle}>Enter your mobile number</Text>
-            <Text style={type.body}>We'll text a 6-digit code to verify it's you.</Text>
+            <Text style={type.body}>
+              {role === 'rider'
+                ? "We'll text a 6-digit code, then take you to your rider dashboard."
+                : "We'll text a 6-digit code to verify it's you."}
+            </Text>
           </View>
 
           <PhoneField
@@ -101,11 +124,54 @@ export default function PhoneLoginScreen({ navigation }: Props) {
   );
 }
 
+function RoleTab({
+  icon: Icon,
+  label,
+  selected,
+  onPress,
+}: {
+  icon: typeof IconCar;
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[styles.roleTab, selected && styles.roleTabSelected]}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+    >
+      <Icon size={17} color={selected ? colors.white : colors.ink600} strokeWidth={1.9} />
+      <Text style={[styles.roleTabLabel, selected && styles.roleTabLabelSelected]}>{label}</Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.white },
   flex: { flex: 1 },
   body: { paddingHorizontal: 28, paddingTop: 18, gap: space.xxl },
   lockup: { width: 96, height: 96, alignSelf: 'flex-start' },
+  roleToggle: {
+    flexDirection: 'row',
+    gap: 8,
+    padding: 4,
+    borderRadius: radius.control,
+    backgroundColor: colors.surface100,
+    alignSelf: 'flex-start',
+  },
+  roleTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: radius.control - 4,
+  },
+  roleTabSelected: { backgroundColor: colors.navy800 },
+  roleTabLabel: { fontFamily: font.bold, fontSize: 14, color: colors.ink600 },
+  roleTabLabelSelected: { color: colors.white },
   heading: { gap: space.sm },
   error: { fontFamily: font.medium, fontSize: 13, color: colors.danger, marginTop: -space.md },
   legal: {

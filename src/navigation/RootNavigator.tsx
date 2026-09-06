@@ -3,9 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useAppConfig } from '../context/AppConfigContext';
 import AuthNavigator from './AuthNavigator';
-import CustomerNavigator from './CustomerNavigator';
-import RiderNavigator from './RiderNavigator';
-import AdminNavigator from './AdminNavigator';
+import PostAuthGate from './PostAuthGate';
 import SplashScreen from '../screens/auth/SplashScreen';
 
 const MIN_SPLASH_MS = 1200;
@@ -33,21 +31,15 @@ export default function RootNavigator({ fontsReady = true }: { fontsReady?: bool
   return (
     <NavigationContainer>
       {/*
-        Role gate. `user.role` comes from the backend session (POST /auth/verify-otp
-        → user.role), never from anything the client picks — so an admin lands
-        straight on AdminNavigator after OTP with no extra screen, and a customer
-        or rider can never mount the admin tree by navigating. This is UX only;
-        every /admin/* API is independently enforced by the backend (AdminUser).
+        Role gate. `user.role` comes from the backend session, never from
+        anything the client picks — an admin always lands on AdminNavigator
+        with no extra screen, and a customer or rider can never mount the
+        admin tree by navigating (every /admin/* API is independently
+        enforced server-side regardless). PostAuthGate reconciles the
+        User/Rider choice made at login with that role before picking the
+        actual navigator - see its own comment.
       */}
-      {status !== 'signed-in' || !user ? (
-        <AuthNavigator />
-      ) : user.role === 'customer' ? (
-        <CustomerNavigator />
-      ) : user.role === 'rider' ? (
-        <RiderNavigator />
-      ) : (
-        <AdminNavigator />
-      )}
+      {status !== 'signed-in' || !user ? <AuthNavigator /> : <PostAuthGate />}
     </NavigationContainer>
   );
 }

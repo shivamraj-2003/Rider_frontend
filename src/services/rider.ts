@@ -1,4 +1,5 @@
 // Typed wrappers around the rider-facing endpoints (FRONTEND_INTEGRATION.md §6).
+import { File, UploadTask } from 'expo-file-system';
 import { api } from './api';
 import type {
   BookingOut,
@@ -26,8 +27,10 @@ export function onboardRider(payload: OnboardRiderRequest) {
   return api.post<RiderMe>('/riders/onboard', payload);
 }
 
+// A customer checking "am I already a rider" (PostAuthGate, the onboarding
+// gate) treats 404 as a normal answer, not a failure - don't log it as one.
 export function getRiderMe() {
-  return api.get<RiderMe>('/riders/me');
+  return api.get<RiderMe>('/riders/me', { silentStatuses: [404] });
 }
 
 export type DocumentType = 'licence' | 'rc' | 'aadhaar';
@@ -36,13 +39,15 @@ export async function uploadRiderDocument(docType: DocumentType, fileUri: string
   const { upload_url } = await api.post<{ upload_url: string }>(
     `/riders/me/documents/upload-url?doc_type=${docType}`
   );
-  const blob = await (await fetch(fileUri)).blob();
-  const res = await fetch(upload_url, {
-    method: 'PUT',
-    body: blob,
+  // expo-file-system's UploadTask streams the file straight from disk to the
+  // signed URL natively - no intermediate Response.blob() (RN's Blob shim
+  // round-trips the whole file through base64, which is what the
+  // "Add expo-blob" warning was about).
+  const result = await new UploadTask(new File(fileUri), upload_url, {
+    httpMethod: 'PUT',
     headers: { 'Content-Type': mimeType },
-  });
-  if (!res.ok) throw new Error('Document upload failed');
+  }).uploadAsync();
+  if (result.status < 200 || result.status >= 300) throw new Error('Document upload failed');
 }
 
 export function setAvailability(availability: RiderAvailability, lat?: number, lng?: number) {

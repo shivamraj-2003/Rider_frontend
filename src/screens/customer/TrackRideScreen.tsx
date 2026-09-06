@@ -123,7 +123,9 @@ export default function TrackRideScreen({ route, navigation }: Props) {
   };
 
   const isTerminal = live ? TERMINAL_BOOKING_STATUSES.includes(live.status) : false;
-  const canCancel = live ? !isTerminal : false;
+  // The backend refuses to cancel a trip that's already in progress (409) —
+  // match that here so the button never invites a doomed tap.
+  const canCancel = live ? !isTerminal && live.status !== 'in_progress' : false;
   const canShareOrSos = live ? !isTerminal && live.status !== 'requested' : false;
   const insets = useSafeAreaInsets();
 

@@ -87,8 +87,11 @@ export function startTrip(bookingId: string) {
   return api.post<BookingOut>(`/bookings/${bookingId}/start`);
 }
 
-export function completeTrip(bookingId: string, actual_distance_km: number, actual_duration_min: number) {
-  return api.post<BookingOut>(`/bookings/${bookingId}/complete`, { actual_distance_km, actual_duration_min });
+// No manual distance/duration entry — the backend fills both in itself
+// (real elapsed time since the trip started, and the route's estimated
+// distance) rather than trusting a number the rider typed in.
+export function completeTrip(bookingId: string) {
+  return api.post<BookingOut>(`/bookings/${bookingId}/complete`, {});
 }
 
 export function collectCash(bookingId: string) {

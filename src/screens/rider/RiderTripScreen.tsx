@@ -3,7 +3,6 @@ import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-nat
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Button from '../../components/Button';
-import TextField from '../../components/TextField';
 import GradientCard from '../../components/GradientCard';
 import { TripRail } from '../../components/booking';
 import { useAppConfig } from '../../context/AppConfigContext';
@@ -24,8 +23,6 @@ export default function RiderTripScreen({ route, navigation }: Props) {
   const [booking, setBooking] = useState<BookingOut | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [acting, setActing] = useState(false);
-  const [distanceKm, setDistanceKm] = useState('');
-  const [durationMin, setDurationMin] = useState('');
   const [cashCollected, setCashCollected] = useState(false);
 
   const resync = useCallback(async () => {
@@ -75,16 +72,12 @@ export default function RiderTripScreen({ route, navigation }: Props) {
   };
 
   const handleComplete = async () => {
-    const distance = parseFloat(distanceKm);
-    const duration = parseFloat(durationMin);
-    if (!distance || !duration) {
-      setError('Enter the distance and duration actually driven');
-      return;
-    }
     setActing(true);
     setError(null);
     try {
-      await completeTrip(bookingId, distance, duration);
+      // Distance/duration aren't typed in — the backend works them out
+      // itself (route estimate + real elapsed time since the trip started).
+      await completeTrip(bookingId);
       await resync();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not complete trip');
@@ -138,7 +131,12 @@ export default function RiderTripScreen({ route, navigation }: Props) {
       </GradientCard>
 
       <View style={styles.railCard}>
-        <TripRail pickup={booking.pickup_address ?? 'Pickup'} drop={booking.drop_address ?? 'Drop'} />
+        <TripRail
+          pickup={booking.pickup_address ?? 'Pickup'}
+          drop={booking.drop_address ?? 'Drop'}
+          pickupDone={booking.status !== 'assigned'}
+          dropDone={booking.status === 'completed'}
+        />
       </View>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -150,21 +148,7 @@ export default function RiderTripScreen({ route, navigation }: Props) {
       ) : booking.status === 'arrived' ? (
         <Button title="Start trip" onPress={handleStart} loading={acting} />
       ) : booking.status === 'in_progress' ? (
-        <View style={styles.completeForm}>
-          <TextField
-            label="Distance driven (km)"
-            keyboardType="decimal-pad"
-            value={distanceKm}
-            onChangeText={setDistanceKm}
-          />
-          <TextField
-            label="Duration (minutes)"
-            keyboardType="decimal-pad"
-            value={durationMin}
-            onChangeText={setDurationMin}
-          />
-          <Button title="Complete trip" onPress={handleComplete} loading={acting} />
-        </View>
+        <Button title="Complete trip" onPress={handleComplete} loading={acting} />
       ) : booking.status === 'completed' ? (
         booking.payment_method === 'cash' && !cashCollected ? (
           <Button title="Collect cash" onPress={handleCollectCash} loading={acting} />
@@ -191,5 +175,4 @@ const styles = StyleSheet.create({
     ...shadow.card,
   },
   error: { fontFamily: font.medium, fontSize: 13, color: colors.danger },
-  completeForm: { gap: space.md },
 });

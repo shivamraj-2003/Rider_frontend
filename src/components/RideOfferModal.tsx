@@ -22,18 +22,21 @@ export default function RideOfferModal({ offer, accepting, onAccept, onReject, o
     if (!offer) return;
     setSecondsLeft(offer.expires_in);
     const interval = setInterval(() => {
-      setSecondsLeft((s) => {
-        if (s <= 1) {
-          clearInterval(interval);
-          onExpire();
-          return 0;
-        }
-        return s - 1;
-      });
+      // Only ever touch this component's own state here — calling
+      // onExpire (a parent setState) from inside this updater ran during
+      // React's render phase and triggered "Cannot update a component
+      // while rendering a different component". The effect below reacts
+      // to secondsLeft hitting 0 instead, which runs after commit.
+      setSecondsLeft((s) => (s <= 1 ? 0 : s - 1));
     }, 1000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [offer?.booking_id]);
+
+  useEffect(() => {
+    if (offer && secondsLeft <= 0) onExpire();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [secondsLeft]);
 
   if (!offer) return null;
 

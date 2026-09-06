@@ -32,10 +32,16 @@ if (!isExpoGo) {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     real = require('./MapCanvasReal') as RealModule;
-  } catch {
+  } catch (err) {
     // No dev-client native module linked yet (e.g. first run after adding
     // the package, before a prebuild) — fall back to the placeholder below
-    // rather than crashing the screen.
+    // rather than crashing the screen. Logged (not swallowed silently) so a
+    // real map showing the placeholder in a dev-client/Android Studio build
+    // is diagnosable instead of looking like nothing happened: this almost
+    // always means the native module needs `npx expo prebuild` (or a fresh
+    // `npx expo run:android`) after @rnmapbox/maps was added/changed.
+    // eslint-disable-next-line no-console
+    console.warn('[MapCanvas] Real map unavailable, using placeholder:', err);
     real = null;
   }
 }

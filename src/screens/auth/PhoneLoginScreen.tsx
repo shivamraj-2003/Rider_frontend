@@ -63,7 +63,12 @@ export default function PhoneLoginScreen({ navigation }: Props) {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.body}>
-          <Image source={require('../../../assets/logo.png')} style={styles.lockup} resizeMode="contain" />
+          <Image
+            source={require('../../../assets/logo.png')}
+            style={styles.lockup}
+            resizeMode="contain"
+            accessibilityLabel="Top Rider"
+          />
 
           <View style={styles.roleToggle}>
             <RoleTab
@@ -152,7 +157,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.white },
   flex: { flex: 1 },
   body: { paddingHorizontal: 28, paddingTop: 18, gap: space.xxl },
-  lockup: { width: 96, height: 96, alignSelf: 'flex-start' },
+  lockup: { width: 96, height: 96, alignSelf: 'center' },
   roleToggle: {
     flexDirection: 'row',
     gap: 8,

@@ -1,9 +1,38 @@
-import React from 'react';
-import { View, Text, Pressable, Animated, StyleSheet, StyleProp, ViewStyle } from 'react-native';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  Pressable,
+  Animated,
+  ScrollView,
+  Dimensions,
+  StyleSheet,
+  StyleProp,
+  ViewStyle,
+  LayoutChangeEvent,
+} from 'react-native';
+import { IconChevronUp } from '@tabler/icons-react-native';
 import type { TablerIcon as Icon } from '../types/icon';
 import { colors, type, radius, shadow, font } from '../theme';
 import { rupees } from '../types';
 import { useSwipeDismiss } from '../hooks/useSwipeDismiss';
+import { useSwipeCollapse } from '../hooks/useSwipeCollapse';
+
+// How much of the peek sheet stays visible when minimized — just the grab
+// handle plus its "Swipe up" hint, so the map behind it stays as uncovered
+// as possible while it's still obviously a draggable sheet, not a stray bar.
+const PEEK_VISIBLE_PX = 60;
+
+// Hard cap on a peek sheet's own layout box. Saved places + the popular-near-
+// you list can make its natural content taller than the screen — and since
+// collapsing/half is only a visual transform (it doesn't shrink the box),
+// an uncapped sheet that tall pushed everything above it (the "Fast · Safe
+// · Affordable" banner) out of position no matter how the screen around it
+// was laid out. Capping the box and scrolling the overflow inside it
+// removes that failure case entirely, rather than working around its
+// symptoms. Also caps how much of the screen "full" can cover, per Rapido.
+const SCREEN_H = Dimensions.get('window').height;
+const MAX_SHEET_HEIGHT = Math.round(SCREEN_H * 0.62);
 
 // Booking-flow UI primitives (Phase 2). Grouped in one file because they are
 // only used together across the five booking screens; the app's generic
@@ -16,19 +45,72 @@ export function Sheet({
   children,
   style,
   onDismiss,
+  peek,
 }: {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   // Drag the sheet down past a threshold (or flick it down) to close it —
-  // e.g. navigation.goBack(). Omit on a sheet with nowhere to go back to
-  // (the Home tab's own "Where are you going?" sheet).
+  // e.g. navigation.goBack().
   onDismiss?: () => void;
+  // For a sheet with nowhere to go back to (the Home tab's own "Where are
+  // you going?" sheet) — dragging it down peeks it to just the grab handle
+  // so more map shows, instead of navigating anywhere. Ignored if onDismiss
+  // is also passed.
+  peek?: boolean;
 }) {
-  const { panHandlers, style: dragStyle } = useSwipeDismiss(onDismiss);
+  const [height, setHeight] = useState(0);
+  const dismissGesture = useSwipeDismiss(onDismiss);
+  const usingPeek = !!peek && !onDismiss;
+  const collapseGesture = useSwipeCollapse(height, {
+    peekVisible: PEEK_VISIBLE_PX,
+    // Well under half the screen by default — leaves the map clearly
+    // visible above it right away. Drag it up for the full sheet, or down
+    // to just the grab handle, from there.
+    defaultSnap: 'half',
+    halfVisibleFraction: 0.34,
+  });
+
+  const panHandlers = onDismiss ? dismissGesture.panHandlers : usingPeek ? collapseGesture.panHandlers : {};
+  const dragStyle = onDismiss ? dismissGesture.style : usingPeek ? collapseGesture.style : null;
+
+  const onLayout = (e: LayoutChangeEvent) => {
+    if (usingPeek) setHeight(Math.min(e.nativeEvent.layout.height, MAX_SHEET_HEIGHT));
+  };
+
   return (
-    <Animated.View style={[s.sheet, style, onDismiss ? dragStyle : null]} {...panHandlers}>
-      <View style={s.grab} />
-      {children}
+    <Animated.View
+      style={[s.sheet, style, dragStyle, usingPeek ? { maxHeight: MAX_SHEET_HEIGHT } : null]}
+      onLayout={onLayout}
+    >
+      {/* A plain View, not Pressable — Pressable's own responder handling
+          fought PanResponder for the gesture and silently ate the drag.
+          Tap-to-expand when peeking is handled inside useSwipeCollapse's
+          own release handler instead. */}
+      <View style={s.grabZone} {...panHandlers}>
+        <View style={s.grab} />
+        {usingPeek && collapseGesture.collapsed ? (
+          <View style={s.grabHint} pointerEvents="none">
+            <IconChevronUp size={14} color={colors.ink400} strokeWidth={2.4} />
+            <Text style={s.grabHintLabel}>Swipe up</Text>
+          </View>
+        ) : null}
+      </View>
+      {usingPeek ? (
+        // flexShrink lets this ScrollView be squeezed down to whatever room
+        // is left under the outer View's maxHeight instead of growing to
+        // its natural (unbounded) content size — that bounded height is
+        // exactly what makes it actually scroll its overflow instead of
+        // just rendering everything, same as a plain View would.
+        <ScrollView
+          style={s.scrollView}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={s.scrollBody}
+        >
+          {children}
+        </ScrollView>
+      ) : (
+        children
+      )}
     </Animated.View>
   );
 }
@@ -234,24 +316,31 @@ export function SavedPlaceCard({
   );
 }
 
-// From/to rail: navy dot → line → orange square.
+// From/to rail: navy dot → line → orange square. On a live trip (RiderTrip),
+// pickupDone/dropDone mirror the booking's real status so the drop marker
+// doesn't look "reached" before the trip has actually been completed —
+// everywhere else (DestinationSearchScreen) both default true, unchanged.
 export function TripRail({
   pickup,
   drop,
+  pickupDone = true,
+  dropDone = true,
   onPressPickup,
   onPressDrop,
 }: {
   pickup: string;
   drop: string;
+  pickupDone?: boolean;
+  dropDone?: boolean;
   onPressPickup?: () => void;
   onPressDrop?: () => void;
 }) {
   return (
     <View style={s.rail}>
       <View style={s.railDots}>
-        <View style={s.dotNavy} />
+        <View style={[s.dotNavy, !pickupDone && s.dotPending]} />
         <View style={s.railLine} />
-        <View style={s.dotAccent} />
+        <View style={[s.dotAccent, !dropDone && s.dotPending]} />
       </View>
       <View style={s.railBody}>
         <Pressable onPress={onPressPickup} disabled={!onPressPickup}>
@@ -280,7 +369,16 @@ const s = StyleSheet.create({
     gap: 16,
     ...shadow.sheet,
   },
-  grab: { width: 44, height: 5, borderRadius: 3, backgroundColor: colors.line300, alignSelf: 'center' },
+  // Mirrors `sheet`'s own gap so content still reads the same once it's
+  // inside the ScrollView (a parent's `gap` doesn't reach through a
+  // ScrollView's contentContainer) — only used for the peek/scrollable
+  // variant (CustomerHomeScreen).
+  scrollView: { flexShrink: 1 },
+  scrollBody: { gap: 16, paddingBottom: 12 },
+  grabZone: { alignItems: 'center', marginHorizontal: -22, paddingVertical: 4 },
+  grab: { width: 44, height: 5, borderRadius: 3, backgroundColor: colors.line300 },
+  grabHint: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 4 },
+  grabHintLabel: { fontFamily: font.medium, fontSize: 10.5, color: colors.ink400 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -379,6 +477,7 @@ const s = StyleSheet.create({
   railBody: { flex: 1, gap: 12 },
   dotNavy: { width: 9, height: 9, borderRadius: 5, backgroundColor: colors.navy800 },
   dotAccent: { width: 9, height: 9, borderRadius: 2, backgroundColor: colors.accent },
+  dotPending: { backgroundColor: colors.line300 },
   railLine: { width: 1.5, height: 30, backgroundColor: colors.line300 },
   railText: { fontFamily: font.semibold, fontSize: 15, color: colors.navy800 },
   railTop: { paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.line100 },

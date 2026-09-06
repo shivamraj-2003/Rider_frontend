@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { Text, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import AdminScreen from '../../../components/admin/AdminScreen';
@@ -74,18 +74,16 @@ export default function EarningsOverviewScreen() {
                 {summary.top_riders.length === 0 ? (
                   <Text style={[styles.dim, styles.pad]}>No paid trips yet.</Text>
                 ) : (
-                  <View style={styles.listInset}>
-                    {summary.top_riders.map((r, i) => (
-                      <ListRow
-                        key={r.rider_id}
-                        leading={`#${i + 1}`}
-                        title={`Rider ${r.rider_id.slice(0, 8)}`}
-                        subtitle={`${r.trips} trips`}
-                        trailing={money(r.earnings)}
-                        divider={i < summary.top_riders.length - 1}
-                      />
-                    ))}
-                  </View>
+                  summary.top_riders.map((r, i) => (
+                    <ListRow
+                      key={r.rider_id}
+                      leading={`#${i + 1}`}
+                      title={`Rider ${r.rider_id.slice(0, 8)}`}
+                      subtitle={`${r.trips} trips`}
+                      trailing={money(r.earnings)}
+                      divider={i < summary.top_riders.length - 1}
+                    />
+                  ))
                 )}
               </SectionCard>
 
@@ -110,5 +108,4 @@ export default function EarningsOverviewScreen() {
 const styles = StyleSheet.create({
   dim: { fontFamily: font.regular, fontSize: 13, color: colors.ink400 },
   pad: { padding: space.md },
-  listInset: { paddingHorizontal: space.sm },
 });

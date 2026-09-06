@@ -88,16 +88,14 @@ export default function RideDetailScreen() {
           </SectionCard>
 
           <SectionCard title="Timeline" padded={false}>
-            <View style={styles.listInset}>
-              {STEPS.filter((s) => data.timeline[s.key as keyof typeof data.timeline]).map((s, idx, arr) => (
-                <ListRow
-                  key={s.key}
-                  title={s.label}
-                  subtitle={dateTime(data.timeline[s.key as keyof typeof data.timeline] as string)}
-                  divider={idx < arr.length - 1}
-                />
-              ))}
-            </View>
+            {STEPS.filter((s) => data.timeline[s.key as keyof typeof data.timeline]).map((s, idx, arr) => (
+              <ListRow
+                key={s.key}
+                title={s.label}
+                subtitle={dateTime(data.timeline[s.key as keyof typeof data.timeline] as string)}
+                divider={idx < arr.length - 1}
+              />
+            ))}
             {data.timeline.cancellation_reason ? (
               <View style={styles.reason}>
                 <Text style={styles.reasonText}>Reason: {data.timeline.cancellation_reason}</Text>
@@ -109,17 +107,15 @@ export default function RideDetailScreen() {
             {data.offers.length === 0 ? (
               <Text style={[styles.dim, styles.pad]}>No offers recorded.</Text>
             ) : (
-              <View style={styles.listInset}>
-                {data.offers.map((o, i) => (
-                  <ListRow
-                    key={`${o.rider_id}-${i}`}
-                    title={`Rider ${o.rider_id.slice(0, 8)}`}
-                    subtitle={`${titleCase(o.outcome)}${o.distance_km != null ? ` · ${o.distance_km} km away` : ''}`}
-                    trailing={dateTime(o.offered_at)}
-                    divider={i < data.offers.length - 1}
-                  />
-                ))}
-              </View>
+              data.offers.map((o, i) => (
+                <ListRow
+                  key={`${o.rider_id}-${i}`}
+                  title={`Rider ${o.rider_id.slice(0, 8)}`}
+                  subtitle={`${titleCase(o.outcome)}${o.distance_km != null ? ` · ${o.distance_km} km away` : ''}`}
+                  trailing={dateTime(o.offered_at)}
+                  divider={i < data.offers.length - 1}
+                />
+              ))
             )}
           </SectionCard>
 
@@ -127,17 +123,15 @@ export default function RideDetailScreen() {
             {data.payments.length === 0 ? (
               <Text style={[styles.dim, styles.pad]}>No payment records.</Text>
             ) : (
-              <View style={styles.listInset}>
-                {data.payments.map((p, i) => (
-                  <ListRow
-                    key={p.id}
-                    title={money(p.amount)}
-                    subtitle={titleCase(p.method)}
-                    trailing={<StatusBadge status={p.status} />}
-                    divider={i < data.payments.length - 1}
-                  />
-                ))}
-              </View>
+              data.payments.map((p, i) => (
+                <ListRow
+                  key={p.id}
+                  title={money(p.amount)}
+                  subtitle={titleCase(p.method)}
+                  trailing={<StatusBadge status={p.status} />}
+                  divider={i < data.payments.length - 1}
+                />
+              ))
             )}
           </SectionCard>
         </>
@@ -155,7 +149,6 @@ const styles = StyleSheet.create({
   trackBtn: { marginTop: space.md },
   dim: { fontFamily: font.regular, fontSize: 13, color: colors.ink400 },
   pad: { padding: space.md },
-  listInset: { paddingHorizontal: space.sm, paddingBottom: space.sm },
   reason: { padding: space.md, borderTopWidth: 1, borderTopColor: colors.line100 },
   reasonText: { fontFamily: font.medium, fontSize: 12.5, color: colors.danger },
 });

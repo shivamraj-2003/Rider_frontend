@@ -43,23 +43,18 @@ export default function RecentActivitiesScreen() {
         <EmptyState title="No activity" hint="Actions that change money, roles or pricing are logged here." />
       ) : (
         <SectionCard padded={false}>
-          <View style={styles.listInset}>
-            {data.map((l, i) => (
-              <ListRow
-                key={l.id}
-                title={titleCase(l.action)}
-                subtitle={`${titleCase(l.entity_type)}${l.actor_role ? ` · ${l.actor_role}` : ''} · ${dateTime(l.created_at)}`}
-                divider={i < data.length - 1}
-              />
-            ))}
-          </View>
+          {data.map((l, i) => (
+            <ListRow
+              key={l.id}
+              title={titleCase(l.action)}
+              subtitle={`${titleCase(l.entity_type)}${l.actor_role ? ` · ${l.actor_role}` : ''} · ${dateTime(l.created_at)}`}
+              divider={i < data.length - 1}
+            />
+          ))}
         </SectionCard>
       )}
     </AdminScreen>
   );
 }
 
-const styles = StyleSheet.create({
-  filters: { marginBottom: space.xs },
-  listInset: { paddingHorizontal: space.sm, paddingBottom: space.sm },
-});
+const styles = StyleSheet.create({ filters: { marginBottom: space.xs } });

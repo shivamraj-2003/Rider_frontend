@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, Animated, Easing, Alert, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import CancelRideSheet from '../../components/CancelRideSheet';
 import MapCanvas from '../../components/MapCanvas';
 import { useBookingSocket } from '../../hooks/useBookingSocket';
 import { getBooking, cancelBooking } from '../../services/customer';
@@ -18,6 +19,7 @@ export default function SearchingRiderScreen({ navigation, route }: Props) {
   const { booking: initial, pickup, drop } = route.params;
   const [booking, setBooking] = useState(initial);
   const [cancelling, setCancelling] = useState(false);
+  const [cancelSheetOpen, setCancelSheetOpen] = useState(false);
   const pulse = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
 
@@ -74,35 +76,24 @@ export default function SearchingRiderScreen({ navigation, route }: Props) {
     { onResync: resync }
   );
 
-  const confirmCancel = () => {
-    Alert.alert('Cancel this ride?', 'A fee may apply once a rider has been assigned.', [
-      { text: 'Keep searching', style: 'cancel' },
-      {
-        text: 'Cancel ride',
-        style: 'destructive',
-        onPress: async () => {
-          setCancelling(true);
-          try {
-            await cancelBooking(booking.id, 'Changed my mind');
-            navigation.navigate('Tabs');
-          } catch (err) {
-            // The search can resolve (rider found, or no riders found) in the gap
-            // between tapping Cancel and the request landing - a 409 here almost
-            // always means the booking already moved on, not a real failure.
-            if (err instanceof ApiError && err.status === 409) {
-              await resync();
-              setCancelling(false);
-              return;
-            }
-            setCancelling(false);
-            Alert.alert(
-              'Could not cancel',
-              err instanceof ApiError ? err.message : 'Please try again.'
-            );
-          }
-        },
-      },
-    ]);
+  const confirmCancel = async (reason: string) => {
+    setCancelling(true);
+    try {
+      await cancelBooking(booking.id, reason);
+      navigation.navigate('Tabs');
+    } catch (err) {
+      // The search can resolve (rider found, or no riders found) in the gap
+      // between tapping Cancel and the request landing - a 409 here almost
+      // always means the booking already moved on, not a real failure.
+      if (err instanceof ApiError && err.status === 409) {
+        await resync();
+        setCancelling(false);
+        setCancelSheetOpen(false);
+        return;
+      }
+      setCancelling(false);
+      Alert.alert('Could not cancel', err instanceof ApiError ? err.message : 'Please try again.');
+    }
   };
 
   const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1.9] });
@@ -156,7 +147,7 @@ export default function SearchingRiderScreen({ navigation, route }: Props) {
         </View>
 
         <Pressable
-          onPress={confirmCancel}
+          onPress={() => setCancelSheetOpen(true)}
           disabled={cancelling}
           style={styles.cancel}
           accessibilityRole="button"
@@ -164,6 +155,14 @@ export default function SearchingRiderScreen({ navigation, route }: Props) {
           <Text style={styles.cancelLabel}>{cancelling ? 'Cancelling…' : 'Cancel request'}</Text>
         </Pressable>
       </View>
+
+      <CancelRideSheet
+        visible={cancelSheetOpen}
+        busy={cancelling}
+        warning="A fee may apply once a rider has been assigned."
+        onClose={() => setCancelSheetOpen(false)}
+        onConfirm={confirmCancel}
+      />
     </View>
   );
 }

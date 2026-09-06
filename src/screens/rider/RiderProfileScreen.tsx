@@ -4,6 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import ScreenScaffold from '../../components/ScreenScaffold';
 import InfoCard from '../../components/InfoCard';
 import Button from '../../components/Button';
+import GradientCard from '../../components/GradientCard';
 import { GlyphTile } from '../../components/booking';
 import { useAuth, ApiError } from '../../context/AuthContext';
 import { getRiderMe, uploadRiderDocument } from '../../services/rider';
@@ -46,7 +47,7 @@ export default function RiderProfileScreen() {
 
   return (
     <ScreenScaffold title="Rider Profile">
-      <View style={styles.profileCard}>
+      <GradientCard style={styles.profileCard}>
         <View style={styles.avatar}>
           <Text style={styles.avatarLabel}>{initial}</Text>
         </View>
@@ -54,7 +55,7 @@ export default function RiderProfileScreen() {
           <Text style={styles.profileName}>{user?.full_name ?? '—'}</Text>
           <Text style={styles.profileSub}>{user?.phone ?? '—'}</Text>
         </View>
-      </View>
+      </GradientCard>
 
       {loading ? (
         <ActivityIndicator color={colors.accentDark} />
@@ -151,23 +152,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.md,
-    backgroundColor: colors.white,
-    borderRadius: radius.card,
     padding: space.lg,
-    ...shadow.card,
   },
   avatar: {
     width: 56,
     height: 56,
     borderRadius: 20,
-    backgroundColor: colors.navy800,
+    backgroundColor: 'rgba(255,255,255,0.16)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarLabel: { fontFamily: font.extrabold, fontSize: 22, color: colors.white },
   profileBody: { flex: 1, gap: 2 },
-  profileName: { fontFamily: font.extrabold, fontSize: 18, color: colors.navy800 },
-  profileSub: { fontFamily: font.regular, fontSize: 13.5, color: colors.ink600 },
+  profileName: { fontFamily: font.extrabold, fontSize: 18, color: colors.white },
+  profileSub: { fontFamily: font.regular, fontSize: 13.5, color: 'rgba(255,255,255,0.7)' },
   vehicleCard: {
     flexDirection: 'row',
     alignItems: 'center',

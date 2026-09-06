@@ -7,12 +7,12 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as Location from 'expo-location';
 import { IconBriefcase, IconChevronRight, IconHome, IconMapPin, IconStar } from '@tabler/icons-react-native';
 import { useAppConfig } from '../../context/AppConfigContext';
-import { getSavedPlaces, reverseGeocode } from '../../services/customer';
+import { getPopularPlaces, getSavedPlaces, reverseGeocode } from '../../services/customer';
 import { colors, font, radius, shadow } from '../../theme';
-import { Sheet, GlyphTile } from '../../components/booking';
+import { Sheet, GlyphTile, PlaceRow } from '../../components/booking';
 import MapCanvas from '../../components/MapCanvas';
 import { VEHICLE_META } from '../../types';
-import type { Place, SavedPlace } from '../../types';
+import type { Place, PopularPlace, SavedPlace } from '../../types';
 import type { CustomerStackParamList, CustomerTabParamList } from '../../navigation/CustomerNavigator';
 
 // Home-screen convention: a saved place's own label picks its icon, falling
@@ -36,6 +36,7 @@ export default function CustomerHomeScreen({ navigation }: Props) {
   const { config, activeBooking } = useAppConfig();
   const [pickup, setPickup] = useState<Place | null>(null);
   const [saved, setSaved] = useState<SavedPlace[]>([]);
+  const [popular, setPopular] = useState<PopularPlace[]>([]);
 
   useEffect(() => {
     if (activeBooking) {
@@ -48,6 +49,13 @@ export default function CustomerHomeScreen({ navigation }: Props) {
       .then(setSaved)
       .catch(() => setSaved([]));
   }, []);
+
+  useEffect(() => {
+    if (!pickup) return;
+    getPopularPlaces(pickup.lat, pickup.lng)
+      .then(setPopular)
+      .catch(() => setPopular([]));
+  }, [pickup]);
 
   useEffect(() => {
     (async () => {
@@ -175,6 +183,23 @@ export default function CustomerHomeScreen({ navigation }: Props) {
                         );
                       })}
                     </View>
+                  </View>
+                ) : null}
+
+                {popular.length > 0 ? (
+                  <View style={styles.savedSection}>
+                    <Text style={styles.savedHeading}>Popular near you</Text>
+                    {popular.map((p) => (
+                      <PlaceRow
+                        key={p.address}
+                        name={p.name}
+                        address={p.address}
+                        distanceKm={p.distance_km}
+                        onPress={() =>
+                          toSearch({ place_id: p.address, name: p.name, address: p.address, lat: p.lat, lng: p.lng })
+                        }
+                      />
+                    ))}
                   </View>
                 ) : null}
 

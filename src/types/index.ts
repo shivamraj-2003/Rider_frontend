@@ -138,6 +138,17 @@ export interface SavedPlace extends Place {
   label: string;
 }
 
+// GET /places/popular — real most-booked drop points near a location,
+// grouped from completed bookings across all customers.
+export interface PopularPlace {
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  trip_count: number;
+  distance_km: number;
+}
+
 // POST /bookings/estimates — one row per vehicle type
 export interface FareEstimate {
   vehicle_type: VehicleType;

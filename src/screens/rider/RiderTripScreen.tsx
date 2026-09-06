@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Button from '../../components/Button';
 import TextField from '../../components/TextField';
+import GradientCard from '../../components/GradientCard';
 import { TripRail } from '../../components/booking';
 import { useAppConfig } from '../../context/AppConfigContext';
 import { useBookingSocket } from '../../hooks/useBookingSocket';
@@ -131,10 +132,10 @@ export default function RiderTripScreen({ route, navigation }: Props) {
     >
       <Text style={styles.title}>Trip</Text>
 
-      <View style={styles.statusCard}>
+      <GradientCard style={styles.statusCard}>
         <Text style={styles.statusText}>{booking.status.replace(/_/g, ' ')}</Text>
         {booking.final_fare != null ? <Text style={styles.fare}>₹{booking.final_fare.toFixed(0)}</Text> : null}
-      </View>
+      </GradientCard>
 
       <View style={styles.railCard}>
         <TripRail pickup={booking.pickup_address ?? 'Pickup'} drop={booking.drop_address ?? 'Drop'} />
@@ -180,13 +181,7 @@ const styles = StyleSheet.create({
   loading: { flex: 1 },
   container: { padding: space.xl, gap: space.lg },
   title: { fontFamily: font.extrabold, fontSize: 24, letterSpacing: -0.4, color: colors.navy800 },
-  statusCard: {
-    backgroundColor: colors.navy800,
-    borderRadius: radius.card,
-    padding: space.xl,
-    gap: 4,
-    ...shadow.card,
-  },
+  statusCard: { padding: space.xl, gap: 4 },
   statusText: { fontFamily: font.extrabold, fontSize: 18, color: colors.white, textTransform: 'capitalize' },
   fare: { fontFamily: font.semibold, fontSize: 15, color: colors.accent },
   railCard: {

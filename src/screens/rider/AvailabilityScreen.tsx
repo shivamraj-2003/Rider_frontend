@@ -7,6 +7,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import ScreenScaffold from '../../components/ScreenScaffold';
 import InfoCard from '../../components/InfoCard';
 import RideOfferModal from '../../components/RideOfferModal';
+import GradientCard from '../../components/GradientCard';
 import { GlyphTile } from '../../components/booking';
 import { useAppConfig } from '../../context/AppConfigContext';
 import { useRiderSocket } from '../../hooks/useRiderSocket';
@@ -164,25 +165,43 @@ export default function AvailabilityScreen({ navigation }: Props) {
 
   return (
     <ScreenScaffold title="Rider Home" subtitle="Go online to receive ride requests">
-      <View style={[styles.hero, isOnline && styles.heroOnline]}>
-        <View style={styles.heroTop}>
-          <GlyphTile icon={meta.icon} tone={isOnline ? 'accent' : 'dark'} />
-          <View style={styles.heroBody}>
-            <Text style={[styles.heroStatus, isOnline && styles.heroStatusOnline]}>
-              {isOnline ? 'You’re online' : 'You’re offline'}
-            </Text>
-            <Text style={[styles.heroSub, isOnline && styles.heroSubOnline]}>
-              {meta.label} · {riderMe.vehicle_number ?? '—'}
-            </Text>
+      {isOnline ? (
+        <GradientCard style={styles.heroContent}>
+          <View style={styles.heroTop}>
+            <GlyphTile icon={meta.icon} tone="accent" />
+            <View style={styles.heroBody}>
+              <Text style={[styles.heroStatus, styles.heroStatusOnline]}>You’re online</Text>
+              <Text style={[styles.heroSub, styles.heroSubOnline]}>
+                {meta.label} · {riderMe.vehicle_number ?? '—'}
+              </Text>
+            </View>
+            <Switch
+              value={isOnline}
+              onValueChange={handleToggle}
+              disabled={toggling}
+              trackColor={{ true: colors.accent, false: colors.line300 }}
+            />
           </View>
-          <Switch
-            value={isOnline}
-            onValueChange={handleToggle}
-            disabled={toggling}
-            trackColor={{ true: colors.accent, false: colors.line300 }}
-          />
+        </GradientCard>
+      ) : (
+        <View style={[styles.hero, styles.heroContent]}>
+          <View style={styles.heroTop}>
+            <GlyphTile icon={meta.icon} tone="dark" />
+            <View style={styles.heroBody}>
+              <Text style={styles.heroStatus}>You’re offline</Text>
+              <Text style={styles.heroSub}>
+                {meta.label} · {riderMe.vehicle_number ?? '—'}
+              </Text>
+            </View>
+            <Switch
+              value={isOnline}
+              onValueChange={handleToggle}
+              disabled={toggling}
+              trackColor={{ true: colors.accent, false: colors.line300 }}
+            />
+          </View>
         </View>
-      </View>
+      )}
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <View style={styles.statsRow}>
@@ -205,10 +224,9 @@ const styles = StyleSheet.create({
   hero: {
     backgroundColor: colors.white,
     borderRadius: radius.card,
-    padding: space.lg,
     ...shadow.card,
   },
-  heroOnline: { backgroundColor: colors.navy800 },
+  heroContent: { padding: space.lg },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   heroBody: { flex: 1, gap: 2 },
   heroStatus: { fontFamily: font.extrabold, fontSize: 17, color: colors.navy800 },

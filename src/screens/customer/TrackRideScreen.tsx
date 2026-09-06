@@ -5,7 +5,8 @@ import * as Location from 'expo-location';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { IconAlertTriangle, IconMapPin, IconMessageCircle, IconPhone, IconShare, IconStarFilled } from '@tabler/icons-react-native';
 import Button from '../../components/Button';
-import TextField from '../../components/TextField';
+import CancelRideSheet from '../../components/CancelRideSheet';
+import GradientCard from '../../components/GradientCard';
 import MapCanvas from '../../components/MapCanvas';
 import { useAppConfig } from '../../context/AppConfigContext';
 import { useBookingSocket } from '../../hooks/useBookingSocket';
@@ -36,7 +37,7 @@ export default function TrackRideScreen({ route, navigation }: Props) {
   const [live, setLive] = useState<BookingLive | null>(null);
   const [booking, setBooking] = useState<BookingOut | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [cancelReason, setCancelReason] = useState('');
+  const [cancelSheetOpen, setCancelSheetOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [sosSending, setSosSending] = useState(false);
   const [sharing, setSharing] = useState(false);
@@ -68,11 +69,12 @@ export default function TrackRideScreen({ route, navigation }: Props) {
   // poll only while the socket can't hold a connection.
   useBookingSocket(bookingId, () => resync(), { onResync: resync, onPoll: resync });
 
-  const handleCancel = async () => {
+  const handleCancel = async (reason: string) => {
     setCancelling(true);
     setError(null);
     try {
-      await cancelBooking(bookingId, cancelReason.trim() || 'Changed my mind');
+      await cancelBooking(bookingId, reason);
+      setCancelSheetOpen(false);
       await resync();
       refresh();
     } catch (err) {
@@ -165,7 +167,7 @@ export default function TrackRideScreen({ route, navigation }: Props) {
             </View>
           ) : null}
 
-          <View style={styles.statusCard}>
+          <GradientCard style={styles.statusCard}>
             <Text style={styles.statusText}>{STATUS_LABELS[live.status] ?? live.status}</Text>
             {live.eta_minutes != null && !isTerminal ? (
               <Text style={styles.eta}>ETA: {live.eta_minutes} min</Text>
@@ -180,7 +182,7 @@ export default function TrackRideScreen({ route, navigation }: Props) {
             ) : !isTerminal ? (
               <Text style={styles.location}>Locating rider…</Text>
             ) : null}
-          </View>
+          </GradientCard>
 
           {rider && !isTerminal ? (
             <View style={styles.riderCard}>
@@ -228,15 +230,7 @@ export default function TrackRideScreen({ route, navigation }: Props) {
           ) : null}
 
           {canCancel ? (
-            <View style={styles.cancelSection}>
-              <TextField
-                label="Cancellation reason (optional)"
-                placeholder="Changed my mind"
-                value={cancelReason}
-                onChangeText={setCancelReason}
-              />
-              <Button title="Cancel ride" variant="secondary" onPress={handleCancel} loading={cancelling} />
-            </View>
+            <Button title="Cancel ride" variant="secondary" onPress={() => setCancelSheetOpen(true)} />
           ) : null}
 
           {isTerminal ? (
@@ -248,6 +242,18 @@ export default function TrackRideScreen({ route, navigation }: Props) {
           ) : null}
         </>
       )}
+
+      <CancelRideSheet
+        visible={cancelSheetOpen}
+        busy={cancelling}
+        warning={
+          live?.status === 'assigned' || live?.status === 'arrived'
+            ? 'A cancellation fee may apply since a rider is already on the way.'
+            : undefined
+        }
+        onClose={() => setCancelSheetOpen(false)}
+        onConfirm={handleCancel}
+      />
     </ScrollView>
   );
 }
@@ -256,13 +262,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.surface50 },
   container: { padding: space.xl, gap: space.lg },
   title: { fontFamily: font.extrabold, fontSize: 24, letterSpacing: -0.4, color: colors.navy800 },
-  statusCard: {
-    backgroundColor: colors.navy800,
-    borderRadius: radius.card,
-    padding: space.xl,
-    gap: 6,
-    ...shadow.card,
-  },
+  statusCard: { padding: space.xl, gap: 6 },
   statusText: { fontFamily: font.extrabold, fontSize: 18, color: colors.white },
   eta: { fontFamily: font.semibold, fontSize: 14.5, color: colors.accent },
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },

@@ -72,14 +72,28 @@ async function refreshAccessToken(): Promise<string | null> {
 async function request<T>(method: string, path: string, body?: unknown, retry = true): Promise<T> {
   const token = await tokenStore.getAccessToken();
 
-  const res = await fetch(`${API_URL}${path}`, {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch (err) {
+    // fetch() only rejects on a transport failure — the server is unreachable
+    // (not running, wrong EXPO_PUBLIC_API_URL, bound to 127.0.0.1 instead of
+    // 0.0.0.0, blocked by a firewall, or no network). Surface that clearly
+    // instead of letting each screen show its own generic "try again".
+    console.warn(`[api] ${method} ${path} → network error (${API_URL}):`, err);
+    throw new ApiError(
+      'network_error',
+      `Can't reach the server at ${API_URL}. Check that the backend is running and reachable from this device.`,
+      0
+    );
+  }
 
   // Expired access token: refresh once, then replay the original request.
   if (res.status === 401 && retry && !path.startsWith('/auth/')) {

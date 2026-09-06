@@ -2,7 +2,8 @@
 // Enums and shapes mirror Rider_backend's FRONTEND_INTEGRATION.md verbatim —
 // keep this file in sync with that guide, not the other way around.
 
-import { IconCar, IconMotorbike, IconScooter, type Icon } from '@tabler/icons-react-native';
+import { IconCar, IconMotorbike, IconScooter } from '@tabler/icons-react-native';
+import type { TablerIcon as Icon } from './icon';
 
 // GET /bookings and other paginated list endpoints — mirrors app/schemas/common.py Page.
 export interface Page<T> {

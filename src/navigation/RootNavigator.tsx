@@ -32,6 +32,13 @@ export default function RootNavigator({ fontsReady = true }: { fontsReady?: bool
 
   return (
     <NavigationContainer>
+      {/*
+        Role gate. `user.role` comes from the backend session (POST /auth/verify-otp
+        → user.role), never from anything the client picks — so an admin lands
+        straight on AdminNavigator after OTP with no extra screen, and a customer
+        or rider can never mount the admin tree by navigating. This is UX only;
+        every /admin/* API is independently enforced by the backend (AdminUser).
+      */}
       {status !== 'signed-in' || !user ? (
         <AuthNavigator />
       ) : user.role === 'customer' ? (

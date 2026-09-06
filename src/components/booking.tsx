@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet, StyleProp, ViewStyle } from 'react-native';
-import type { Icon } from '@tabler/icons-react-native';
+import type { TablerIcon as Icon } from '../types/icon';
 import { colors, type, radius, shadow, font } from '../theme';
 import { rupees } from '../types';
 

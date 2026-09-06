@@ -40,7 +40,7 @@ export default function RidersListScreen() {
       }),
     [status]
   );
-  const { data, loading, error, refreshing, onRefresh, refetch } = useAdminQuery(fetcher);
+  const { data, loading, error, refreshing, fetching, onRefresh, refetch } = useAdminQuery(fetcher);
 
   return (
     <AdminScreen title="Riders" refreshing={refreshing} onRefresh={onRefresh}>
@@ -52,6 +52,8 @@ export default function RidersListScreen() {
         <LoadingState />
       ) : error && !data ? (
         <ErrorState message={error} onRetry={refetch} />
+      ) : fetching && !refreshing ? (
+        <LoadingState />
       ) : !data || data.length === 0 ? (
         <EmptyState title="No riders" />
       ) : (

@@ -6,6 +6,10 @@ interface State<T> {
   data: T | null;
   loading: boolean;
   refreshing: boolean;
+  // True whenever a request is in flight, including background refetches that
+  // keep the previous `data` on screen (e.g. a filter/tab switch). Screens can
+  // show a spinner over stale rows instead of letting them linger.
+  fetching: boolean;
   error: string | null;
 }
 
@@ -27,6 +31,7 @@ export function useAdminQuery<T>(fetcher: () => Promise<T>, opts: Options = {}) 
     data: null,
     loading: true,
     refreshing: false,
+    fetching: true,
     error: null,
   });
   const mounted = useRef(true);
@@ -43,16 +48,18 @@ export function useAdminQuery<T>(fetcher: () => Promise<T>, opts: Options = {}) 
         ...s,
         loading: mode === 'initial' && s.data === null,
         refreshing: mode === 'refresh',
+        fetching: true,
         error: null,
       }));
       try {
         const data = await fetcher();
-        if (mounted.current) setState({ data, loading: false, refreshing: false, error: null });
+        if (mounted.current)
+          setState({ data, loading: false, refreshing: false, fetching: false, error: null });
       } catch (err) {
         if (!mounted.current) return;
         const message =
           err instanceof ApiError ? err.message : 'Could not load. Pull to retry.';
-        setState((s) => ({ ...s, loading: false, refreshing: false, error: message }));
+        setState((s) => ({ ...s, loading: false, refreshing: false, fetching: false, error: message }));
       }
     },
     [fetcher]

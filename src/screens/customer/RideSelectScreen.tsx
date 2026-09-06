@@ -72,7 +72,7 @@ export default function RideSelectScreen({ navigation, route }: Props) {
       </Pressable>
 
       <View style={styles.sheetWrap}>
-        <Sheet>
+        <Sheet onDismiss={() => navigation.goBack()}>
           <View style={styles.titleRow}>
             <Text style={styles.title}>Choose a ride</Text>
             {chosen ? (

@@ -103,7 +103,7 @@ export default function PaymentScreen({ navigation, route }: Props) {
       </Pressable>
 
       <View style={styles.sheetWrap}>
-        <Sheet>
+        <Sheet onDismiss={() => navigation.goBack()}>
           <Text style={styles.title}>Payment</Text>
 
           <View style={styles.rows}>

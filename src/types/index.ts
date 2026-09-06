@@ -120,6 +120,7 @@ export interface BookingOut {
   started_at: string | null;
   completed_at: string | null;
   created_at: string;
+  rider?: AssignedRider | null;
 }
 
 // GET /places/search, GET /places/reverse, GET /places/saved
@@ -165,6 +166,17 @@ export const VEHICLE_META: Record<VehicleType, { label: string; icon: Icon; seat
 // ₹ formatter — rounds to whole rupees for display.
 export const rupees = (n: number): string => `₹${Math.round(n)}`;
 
+// Nested on BookingOut/BookingLive once a rider is assigned — the "who's
+// picking me up" card: name, photo, rating, plate, phone (for Call).
+export interface AssignedRider {
+  full_name: string | null;
+  phone: string | null;
+  avatar_url: string | null;
+  rating: number | null;
+  vehicle_type: VehicleType;
+  vehicle_number: string | null;
+}
+
 // GET /bookings/{id}/live
 export interface BookingLive {
   booking_id: string;
@@ -178,6 +190,7 @@ export interface BookingLive {
   } | null;
   eta_minutes: number | null;
   updated_at: string;
+  rider: AssignedRider | null;
 }
 
 // GET /riders/me — mirrors RiderOut exactly (Rider_backend app/schemas/rider.py).

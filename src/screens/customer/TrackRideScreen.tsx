@@ -1,19 +1,20 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, Alert, Share, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, Alert, Share, Linking, StyleSheet, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { IconAlertTriangle, IconMapPin, IconShare } from '@tabler/icons-react-native';
+import { IconAlertTriangle, IconMapPin, IconMessageCircle, IconPhone, IconShare, IconStarFilled } from '@tabler/icons-react-native';
 import Button from '../../components/Button';
 import TextField from '../../components/TextField';
+import MapCanvas from '../../components/MapCanvas';
 import { useAppConfig } from '../../context/AppConfigContext';
 import { useBookingSocket } from '../../hooks/useBookingSocket';
-import { cancelBooking, getLiveBooking } from '../../services/customer';
+import { cancelBooking, getBooking, getLiveBooking } from '../../services/customer';
 import { raiseAlert, shareTrip, stopSharingTrip } from '../../services/safety';
 import { ApiError } from '../../services/api';
 import { colors, font, radius, shadow, space } from '../../theme';
-import { TERMINAL_BOOKING_STATUSES } from '../../types';
-import type { BookingLive } from '../../types';
+import { TERMINAL_BOOKING_STATUSES, VEHICLE_META } from '../../types';
+import type { BookingLive, BookingOut } from '../../types';
 import type { CustomerStackParamList } from '../../navigation/CustomerNavigator';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'TrackRide'>;
@@ -33,6 +34,7 @@ export default function TrackRideScreen({ route, navigation }: Props) {
   const { bookingId } = route.params;
   const { refresh } = useAppConfig();
   const [live, setLive] = useState<BookingLive | null>(null);
+  const [booking, setBooking] = useState<BookingOut | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
@@ -57,7 +59,10 @@ export default function TrackRideScreen({ route, navigation }: Props) {
 
   useEffect(() => {
     resync();
-  }, [resync]);
+    // Pickup/drop coordinates + addresses aren't on the live snapshot — fetch
+    // the full booking once for the map and route summary.
+    getBooking(bookingId).then(setBooking).catch(() => {});
+  }, [bookingId, resync]);
 
   // Live status/location over WS /ws/bookings/{id} — falls back to a REST
   // poll only while the socket can't hold a connection.
@@ -128,6 +133,14 @@ export default function TrackRideScreen({ route, navigation }: Props) {
   const canCancel = live ? !isTerminal && live.status !== 'in_progress' : false;
   const canShareOrSos = live ? !isTerminal && live.status !== 'requested' : false;
   const insets = useSafeAreaInsets();
+  const rider = live?.rider ?? booking?.rider ?? null;
+
+  const handleCall = () => {
+    if (rider?.phone) Linking.openURL(`tel:${rider.phone}`);
+  };
+  const handleMessage = () => {
+    if (rider?.phone) Linking.openURL(`sms:${rider.phone}`);
+  };
 
   return (
     <ScrollView
@@ -140,6 +153,18 @@ export default function TrackRideScreen({ route, navigation }: Props) {
         <ActivityIndicator color={colors.accentDark} />
       ) : (
         <>
+          {booking && !isTerminal ? (
+            <View style={styles.mapCard}>
+              <MapCanvas
+                pickup={{ lat: booking.pickup_lat, lng: booking.pickup_lng }}
+                pickupLabel={booking.pickup_address}
+                drop={{ lat: booking.drop_lat, lng: booking.drop_lng }}
+                dropLabel={booking.drop_address}
+                riderLocation={live.rider_location}
+              />
+            </View>
+          ) : null}
+
           <View style={styles.statusCard}>
             <Text style={styles.statusText}>{STATUS_LABELS[live.status] ?? live.status}</Text>
             {live.eta_minutes != null && !isTerminal ? (
@@ -156,6 +181,36 @@ export default function TrackRideScreen({ route, navigation }: Props) {
               <Text style={styles.location}>Locating rider…</Text>
             ) : null}
           </View>
+
+          {rider && !isTerminal ? (
+            <View style={styles.riderCard}>
+              <View style={styles.riderAvatar}>
+                <Text style={styles.riderAvatarLabel}>
+                  {(rider.full_name?.trim()?.[0] ?? '?').toUpperCase()}
+                </Text>
+              </View>
+              <View style={styles.riderBody}>
+                <Text style={styles.riderName}>{rider.full_name ?? 'Your rider'}</Text>
+                <View style={styles.riderMetaRow}>
+                  {rider.rating != null ? (
+                    <View style={styles.ratingRow}>
+                      <IconStarFilled size={12.5} color={colors.accent} />
+                      <Text style={styles.riderMeta}>{rider.rating.toFixed(1)}</Text>
+                    </View>
+                  ) : null}
+                  <Text style={styles.riderMeta}>
+                    {VEHICLE_META[rider.vehicle_type].label} · {rider.vehicle_number ?? '—'}
+                  </Text>
+                </View>
+              </View>
+              <Pressable style={styles.riderAction} onPress={handleMessage} accessibilityRole="button" accessibilityLabel="Message rider">
+                <IconMessageCircle size={19} color={colors.navy800} strokeWidth={1.9} />
+              </Pressable>
+              <Pressable style={[styles.riderAction, styles.callAction]} onPress={handleCall} accessibilityRole="button" accessibilityLabel="Call rider">
+                <IconPhone size={19} color={colors.white} strokeWidth={1.9} />
+              </Pressable>
+            </View>
+          ) : null}
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -212,6 +267,44 @@ const styles = StyleSheet.create({
   eta: { fontFamily: font.semibold, fontSize: 14.5, color: colors.accent },
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   location: { fontFamily: font.regular, fontSize: 12.5, color: 'rgba(255,255,255,0.7)' },
+  mapCard: {
+    height: 190,
+    borderRadius: radius.card,
+    overflow: 'hidden',
+    ...shadow.card,
+  },
+  riderCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    backgroundColor: colors.white,
+    borderRadius: radius.card,
+    padding: space.md,
+    ...shadow.card,
+  },
+  riderAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 18,
+    backgroundColor: colors.navy800,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  riderAvatarLabel: { fontFamily: font.extrabold, fontSize: 18, color: colors.white },
+  riderBody: { flex: 1, gap: 3 },
+  riderName: { fontFamily: font.bold, fontSize: 15.5, color: colors.navy800 },
+  riderMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  riderMeta: { fontFamily: font.regular, fontSize: 12.5, color: colors.ink600 },
+  riderAction: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: colors.surface50,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  callAction: { backgroundColor: colors.accent },
   error: { fontFamily: font.medium, fontSize: 13, color: colors.danger },
   cancelSection: { gap: space.md },
   safetyRow: { flexDirection: 'row', gap: space.md },

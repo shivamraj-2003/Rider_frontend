@@ -60,7 +60,7 @@ export default function RideSelectScreen({ navigation, route }: Props) {
 
   return (
     <View style={styles.root}>
-      <MapCanvas center={pickup} pickup={pickup} drop={drop} />
+      <MapCanvas center={pickup} pickup={pickup} pickupLabel={pickup.name} drop={drop} dropLabel={drop.name} />
 
       <Pressable
         onPress={() => navigation.goBack()}

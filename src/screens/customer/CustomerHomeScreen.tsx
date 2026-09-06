@@ -73,6 +73,7 @@ export default function CustomerHomeScreen({ navigation }: Props) {
       <MapCanvas
         center={pickup}
         pickup={pickup}
+        pickupLabel={pickup?.name}
       />
 
       <View style={[styles.topRow, { paddingTop: insets.top + 8 }]}>

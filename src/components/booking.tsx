@@ -1,10 +1,16 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, Animated, StyleSheet, StyleProp, ViewStyle, LayoutChangeEvent } from 'react-native';
+import { IconChevronUp } from '@tabler/icons-react-native';
 import type { TablerIcon as Icon } from '../types/icon';
 import { colors, type, radius, shadow, font } from '../theme';
 import { rupees } from '../types';
 import { useSwipeDismiss } from '../hooks/useSwipeDismiss';
 import { useSwipeCollapse } from '../hooks/useSwipeCollapse';
+
+// How much of the peek sheet stays visible when minimized — just the grab
+// handle plus its "Swipe up" hint, so the map behind it stays as uncovered
+// as possible while it's still obviously a draggable sheet, not a stray bar.
+const PEEK_VISIBLE_PX = 60;
 
 // Booking-flow UI primitives (Phase 2). Grouped in one file because they are
 // only used together across the five booking screens; the app's generic
@@ -32,8 +38,14 @@ export function Sheet({
 }) {
   const [height, setHeight] = useState(0);
   const dismissGesture = useSwipeDismiss(onDismiss);
-  const collapseGesture = useSwipeCollapse(height);
   const usingPeek = !!peek && !onDismiss;
+  const collapseGesture = useSwipeCollapse(height, {
+    peekVisible: PEEK_VISIBLE_PX,
+    // Minimized by default (Rapido-style) — the map, rider markers and live
+    // tracking sit right behind it, so there's no reason to cover them
+    // until the rider actually asks to see the sheet.
+    defaultCollapsed: usingPeek,
+  });
 
   const panHandlers = onDismiss ? dismissGesture.panHandlers : usingPeek ? collapseGesture.panHandlers : {};
   const dragStyle = onDismiss ? dismissGesture.style : usingPeek ? collapseGesture.style : null;
@@ -50,6 +62,12 @@ export function Sheet({
           own release handler instead. */}
       <View style={s.grabZone} {...panHandlers}>
         <View style={s.grab} />
+        {usingPeek && collapseGesture.collapsed ? (
+          <View style={s.grabHint} pointerEvents="none">
+            <IconChevronUp size={14} color={colors.ink400} strokeWidth={2.4} />
+            <Text style={s.grabHintLabel}>Swipe up</Text>
+          </View>
+        ) : null}
       </View>
       {children}
     </Animated.View>
@@ -312,6 +330,8 @@ const s = StyleSheet.create({
   },
   grabZone: { alignItems: 'center', marginHorizontal: -22, paddingVertical: 4 },
   grab: { width: 44, height: 5, borderRadius: 3, backgroundColor: colors.line300 },
+  grabHint: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 4 },
+  grabHintLabel: { fontFamily: font.medium, fontSize: 10.5, color: colors.ink400 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

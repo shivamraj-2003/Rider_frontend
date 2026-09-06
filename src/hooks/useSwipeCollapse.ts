@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Animated, PanResponder } from 'react-native';
 
 // Drag-down-to-peek for a bottom sheet that has nowhere to "go back" to
@@ -6,7 +6,10 @@ import { Animated, PanResponder } from 'react-native';
 // a pushed one) — dragging it down reveals more map instead of closing
 // anything, and it snaps back up on a tap or another drag. Needs the
 // sheet's own rendered height (from onLayout) to know how far "peek" is.
-export function useSwipeCollapse(sheetHeight: number, peekVisible: number = 64) {
+export function useSwipeCollapse(
+  sheetHeight: number,
+  { peekVisible = 64, defaultCollapsed = false }: { peekVisible?: number; defaultCollapsed?: boolean } = {}
+) {
   const maxTranslate = Math.max(0, sheetHeight - peekVisible);
   // PanResponder.create() only runs once (it's built inside useRef) — its
   // callbacks close over whatever `maxTranslate` was on that FIRST render,
@@ -18,9 +21,21 @@ export function useSwipeCollapse(sheetHeight: number, peekVisible: number = 64) 
   const maxTranslateRef = useRef(maxTranslate);
   maxTranslateRef.current = maxTranslate;
 
-  const translateY = useRef(new Animated.Value(0)).current;
-  const collapsedRef = useRef(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const translateY = useRef(new Animated.Value(defaultCollapsed ? maxTranslate : 0)).current;
+  const collapsedRef = useRef(defaultCollapsed);
+  const [collapsed, setCollapsed] = useState(defaultCollapsed);
+
+  // Re-pin the collapsed position whenever the sheet's real height changes -
+  // covers both the very first onLayout (sheetHeight is 0 on mount, so the
+  // "collapsed" position above was a guess) and later content loading in
+  // (saved places / popular list) making the sheet taller. Without this, a
+  // rider/content update after mount could look like the sheet "auto
+  // expanded" simply because the collapsed offset never moved to match a
+  // now-taller sheet. Only touches the position while still collapsed - an
+  // expanded sheet is never nudged by a content change.
+  useEffect(() => {
+    if (collapsedRef.current) translateY.setValue(maxTranslate);
+  }, [maxTranslate, translateY]);
 
   const snapTo = (toValue: number, isCollapsed: boolean) => {
     collapsedRef.current = isCollapsed;

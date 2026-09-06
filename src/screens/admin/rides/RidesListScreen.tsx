@@ -39,7 +39,7 @@ export default function RidesListScreen() {
     return rows;
   }, [tab]);
 
-  const { data, loading, error, refreshing, onRefresh, refetch } = useAdminQuery(fetcher);
+  const { data, loading, error, refreshing, fetching, onRefresh, refetch } = useAdminQuery(fetcher);
 
   return (
     <AdminScreen title="Rides" back={false} refreshing={refreshing} onRefresh={onRefresh}>
@@ -51,6 +51,8 @@ export default function RidesListScreen() {
         <LoadingState />
       ) : error && !data ? (
         <ErrorState message={error} onRetry={refetch} />
+      ) : fetching && !refreshing ? (
+        <LoadingState />
       ) : !data || data.length === 0 ? (
         <EmptyState title="No rides" />
       ) : (

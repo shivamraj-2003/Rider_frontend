@@ -25,7 +25,7 @@ export default function RecentActivitiesScreen() {
     () => adminApi.getAuditLogs({ action: filter || undefined, limit: 100 }),
     [filter]
   );
-  const { data, loading, error, refreshing, onRefresh, refetch } = useAdminQuery(fetcher);
+  const { data, loading, error, refreshing, fetching, onRefresh, refetch } = useAdminQuery(fetcher);
 
   return (
     <AdminScreen title="Recent Activities" refreshing={refreshing} onRefresh={onRefresh}>
@@ -37,22 +37,29 @@ export default function RecentActivitiesScreen() {
         <LoadingState />
       ) : error && !data ? (
         <ErrorState message={error} onRetry={refetch} />
+      ) : fetching && !refreshing ? (
+        <LoadingState />
       ) : !data || data.length === 0 ? (
         <EmptyState title="No activity" hint="Actions that change money, roles or pricing are logged here." />
       ) : (
         <SectionCard padded={false}>
-          {data.map((l, i) => (
-            <ListRow
-              key={l.id}
-              title={titleCase(l.action)}
-              subtitle={`${titleCase(l.entity_type)}${l.actor_role ? ` · ${l.actor_role}` : ''} · ${dateTime(l.created_at)}`}
-              divider={i < data.length - 1}
-            />
-          ))}
+          <View style={styles.listInset}>
+            {data.map((l, i) => (
+              <ListRow
+                key={l.id}
+                title={titleCase(l.action)}
+                subtitle={`${titleCase(l.entity_type)}${l.actor_role ? ` · ${l.actor_role}` : ''} · ${dateTime(l.created_at)}`}
+                divider={i < data.length - 1}
+              />
+            ))}
+          </View>
         </SectionCard>
       )}
     </AdminScreen>
   );
 }
 
-const styles = StyleSheet.create({ filters: { marginBottom: space.xs } });
+const styles = StyleSheet.create({
+  filters: { marginBottom: space.xs },
+  listInset: { paddingHorizontal: space.sm, paddingBottom: space.sm },
+});

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, Animated, Easing, Alert, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import MapCanvas from '../../components/MapCanvas';
 import { useBookingSocket } from '../../hooks/useBookingSocket';
 import { getBooking, cancelBooking } from '../../services/customer';
 import { ApiError } from '../../services/api';
@@ -111,6 +112,16 @@ export default function SearchingRiderScreen({ navigation, route }: Props) {
 
   return (
     <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom + 24 }]}>
+      <View style={styles.mapCard}>
+        <MapCanvas
+          pickup={{ lat: pickup.lat, lng: pickup.lng }}
+          pickupLabel={pickup.name}
+          drop={{ lat: drop.lat, lng: drop.lng }}
+          dropLabel={drop.name}
+          dim
+        />
+      </View>
+
       <View style={styles.center}>
         <View style={styles.halo}>
           <Animated.View style={[styles.pulse, { transform: [{ scale }], opacity }]} />
@@ -159,6 +170,13 @@ export default function SearchingRiderScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.navy800 },
+  mapCard: {
+    height: 130,
+    marginHorizontal: 22,
+    marginTop: 8,
+    borderRadius: radius.card,
+    overflow: 'hidden',
+  },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 30 },
   halo: { width: 150, height: 150, alignItems: 'center', justifyContent: 'center' },
   pulse: {

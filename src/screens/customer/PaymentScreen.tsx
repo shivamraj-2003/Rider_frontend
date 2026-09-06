@@ -91,7 +91,7 @@ export default function PaymentScreen({ navigation, route }: Props) {
 
   return (
     <View style={styles.root}>
-      <MapCanvas center={pickup} pickup={pickup} drop={drop} dim />
+      <MapCanvas center={pickup} pickup={pickup} pickupLabel={pickup.name} drop={drop} dropLabel={drop.name} dim />
 
       <Pressable
         onPress={() => navigation.goBack()}

@@ -138,7 +138,12 @@ export default function RiderTripScreen({ route, navigation }: Props) {
       </GradientCard>
 
       <View style={styles.railCard}>
-        <TripRail pickup={booking.pickup_address ?? 'Pickup'} drop={booking.drop_address ?? 'Drop'} />
+        <TripRail
+          pickup={booking.pickup_address ?? 'Pickup'}
+          drop={booking.drop_address ?? 'Drop'}
+          pickupDone={booking.status !== 'assigned'}
+          dropDone={booking.status === 'completed'}
+        />
       </View>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}

@@ -257,24 +257,31 @@ export function SavedPlaceCard({
   );
 }
 
-// From/to rail: navy dot → line → orange square.
+// From/to rail: navy dot → line → orange square. On a live trip (RiderTrip),
+// pickupDone/dropDone mirror the booking's real status so the drop marker
+// doesn't look "reached" before the trip has actually been completed —
+// everywhere else (DestinationSearchScreen) both default true, unchanged.
 export function TripRail({
   pickup,
   drop,
+  pickupDone = true,
+  dropDone = true,
   onPressPickup,
   onPressDrop,
 }: {
   pickup: string;
   drop: string;
+  pickupDone?: boolean;
+  dropDone?: boolean;
   onPressPickup?: () => void;
   onPressDrop?: () => void;
 }) {
   return (
     <View style={s.rail}>
       <View style={s.railDots}>
-        <View style={s.dotNavy} />
+        <View style={[s.dotNavy, !pickupDone && s.dotPending]} />
         <View style={s.railLine} />
-        <View style={s.dotAccent} />
+        <View style={[s.dotAccent, !dropDone && s.dotPending]} />
       </View>
       <View style={s.railBody}>
         <Pressable onPress={onPressPickup} disabled={!onPressPickup}>
@@ -403,6 +410,7 @@ const s = StyleSheet.create({
   railBody: { flex: 1, gap: 12 },
   dotNavy: { width: 9, height: 9, borderRadius: 5, backgroundColor: colors.navy800 },
   dotAccent: { width: 9, height: 9, borderRadius: 2, backgroundColor: colors.accent },
+  dotPending: { backgroundColor: colors.line300 },
   railLine: { width: 1.5, height: 30, backgroundColor: colors.line300 },
   railText: { fontFamily: font.semibold, fontSize: 15, color: colors.navy800 },
   railTop: { paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.line100 },

@@ -1,14 +1,16 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Button from '../../components/Button';
 import TextField from '../../components/TextField';
+import { TripRail } from '../../components/booking';
 import { useAppConfig } from '../../context/AppConfigContext';
 import { useBookingSocket } from '../../hooks/useBookingSocket';
 import { getBooking } from '../../services/customer';
 import { collectCash, completeTrip, markArrived, startTrip } from '../../services/rider';
 import { ApiError } from '../../services/api';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, font, radius, shadow, space } from '../../theme';
 import { TERMINAL_BOOKING_STATUSES } from '../../types';
 import type { BookingOut } from '../../types';
 import type { RiderStackParamList } from '../../navigation/RiderNavigator';
@@ -110,10 +112,12 @@ export default function RiderTripScreen({ route, navigation }: Props) {
     navigation.navigate('Tabs');
   };
 
+  const insets = useSafeAreaInsets();
+
   if (!booking) {
     return (
       <View style={styles.screen}>
-        <ActivityIndicator color={colors.primary} style={styles.loading} />
+        <ActivityIndicator color={colors.accentDark} style={styles.loading} />
       </View>
     );
   }
@@ -121,7 +125,10 @@ export default function RiderTripScreen({ route, navigation }: Props) {
   const isCancelled = booking.status === 'cancelled_by_customer' || booking.status === 'cancelled_by_rider';
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={[styles.container, { paddingTop: insets.top + space.lg }]}
+    >
       <Text style={styles.title}>Trip</Text>
 
       <View style={styles.statusCard}>
@@ -129,11 +136,8 @@ export default function RiderTripScreen({ route, navigation }: Props) {
         {booking.final_fare != null ? <Text style={styles.fare}>₹{booking.final_fare.toFixed(0)}</Text> : null}
       </View>
 
-      <View style={styles.addressBlock}>
-        <Text style={styles.addressLabel}>Pickup</Text>
-        <Text style={styles.address}>{booking.pickup_address}</Text>
-        <Text style={styles.addressLabel}>Drop</Text>
-        <Text style={styles.address}>{booking.drop_address}</Text>
+      <View style={styles.railCard}>
+        <TripRail pickup={booking.pickup_address ?? 'Pickup'} drop={booking.drop_address ?? 'Drop'} />
       </View>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -172,16 +176,25 @@ export default function RiderTripScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.background },
+  screen: { flex: 1, backgroundColor: colors.surface50 },
   loading: { flex: 1 },
-  container: { padding: spacing.xl, gap: spacing.lg },
-  title: { ...typography.h2, color: colors.primary },
-  statusCard: { backgroundColor: colors.primary, borderRadius: radius.lg, padding: spacing.xl, gap: spacing.xs },
-  statusText: { ...typography.h3, color: colors.textInverse, textTransform: 'capitalize' },
-  fare: { ...typography.body, color: colors.accent },
-  addressBlock: { gap: 2 },
-  addressLabel: { ...typography.label, color: colors.textSecondary, marginTop: spacing.sm },
-  address: { ...typography.bodyStrong, color: colors.textPrimary },
-  error: { ...typography.caption, color: colors.danger },
-  completeForm: { gap: spacing.md },
+  container: { padding: space.xl, gap: space.lg },
+  title: { fontFamily: font.extrabold, fontSize: 24, letterSpacing: -0.4, color: colors.navy800 },
+  statusCard: {
+    backgroundColor: colors.navy800,
+    borderRadius: radius.card,
+    padding: space.xl,
+    gap: 4,
+    ...shadow.card,
+  },
+  statusText: { fontFamily: font.extrabold, fontSize: 18, color: colors.white, textTransform: 'capitalize' },
+  fare: { fontFamily: font.semibold, fontSize: 15, color: colors.accent },
+  railCard: {
+    backgroundColor: colors.white,
+    borderRadius: radius.card,
+    padding: space.lg,
+    ...shadow.card,
+  },
+  error: { fontFamily: font.medium, fontSize: 13, color: colors.danger },
+  completeForm: { gap: space.md },
 });

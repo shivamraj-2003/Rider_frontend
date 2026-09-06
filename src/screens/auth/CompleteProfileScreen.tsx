@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useAuth, ApiError } from '../../context/AuthContext';
-import { colors, spacing, typography } from '../../theme';
+import { colors, font, space } from '../../theme';
 import Button from '../../components/Button';
 import TextField from '../../components/TextField';
 
@@ -50,8 +50,8 @@ export default function CompleteProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background, padding: spacing.xl, gap: spacing.lg, justifyContent: 'center' },
-  title: { ...typography.h2, color: colors.primary },
-  subtitle: { ...typography.body, color: colors.textSecondary, marginBottom: spacing.sm },
-  error: { ...typography.caption, color: colors.danger },
+  container: { flex: 1, backgroundColor: colors.white, padding: 28, gap: space.lg, justifyContent: 'center' },
+  title: { fontFamily: font.extrabold, fontSize: 27, letterSpacing: -0.5, color: colors.navy800 },
+  subtitle: { fontFamily: font.regular, fontSize: 15, lineHeight: 23, color: colors.ink600, marginBottom: space.sm },
+  error: { fontFamily: font.medium, fontSize: 13, color: colors.danger },
 });

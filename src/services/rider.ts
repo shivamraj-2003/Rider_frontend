@@ -16,6 +16,7 @@ export interface OnboardRiderRequest {
   vehicle_number: string;
   vehicle_model?: string;
   licence_number: string;
+  aadhaar_number: string;
   bank_account_holder?: string;
   bank_account_number?: string;
   bank_ifsc?: string;
@@ -29,7 +30,7 @@ export function getRiderMe() {
   return api.get<RiderMe>('/riders/me');
 }
 
-export type DocumentType = 'licence' | 'rc';
+export type DocumentType = 'licence' | 'rc' | 'aadhaar';
 
 export async function uploadRiderDocument(docType: DocumentType, fileUri: string, mimeType: string) {
   const { upload_url } = await api.post<{ upload_url: string }>(

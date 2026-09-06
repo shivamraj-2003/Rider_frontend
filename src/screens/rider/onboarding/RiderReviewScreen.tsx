@@ -28,6 +28,7 @@ export default function RiderReviewScreen({ navigation }: Props) {
         vehicle_number: data.vehicle_number.trim(),
         vehicle_model: data.vehicle_model.trim() || undefined,
         licence_number: data.licence_number.trim(),
+        aadhaar_number: data.aadhaar_number.trim(),
         bank_account_holder: data.bank_account_holder.trim(),
         bank_account_number: data.bank_account_number.trim(),
         bank_ifsc: data.bank_ifsc.trim(),
@@ -51,6 +52,11 @@ export default function RiderReviewScreen({ navigation }: Props) {
       if (data.rcDoc) await uploadRiderDocument('rc', data.rcDoc.uri, data.rcDoc.mimeType);
     } catch {
       uploadErrors.push('vehicle registration photo');
+    }
+    try {
+      if (data.aadhaarDoc) await uploadRiderDocument('aadhaar', data.aadhaarDoc.uri, data.aadhaarDoc.mimeType);
+    } catch {
+      uploadErrors.push('Aadhaar photo');
     }
 
     // Role flips to 'rider' server-side inside onboardRider — refresh the
@@ -83,12 +89,14 @@ export default function RiderReviewScreen({ navigation }: Props) {
         <InfoCard label="Number" value={data.vehicle_number} />
         {data.vehicle_model ? <InfoCard label="Model" value={data.vehicle_model} /> : null}
         <InfoCard label="Licence number" value={data.licence_number} />
+        <InfoCard label="Aadhaar number" value={`•••• •••• ${data.aadhaar_number.slice(-4)}`} />
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Documents</Text>
         <InfoCard label="Driving licence" value={data.licenceDoc ? 'Added' : 'Missing'} />
         <InfoCard label="Vehicle registration" value={data.rcDoc ? 'Added' : 'Missing'} />
+        <InfoCard label="Aadhaar card" value={data.aadhaarDoc ? 'Added' : 'Missing'} />
       </View>
 
       <View style={styles.section}>

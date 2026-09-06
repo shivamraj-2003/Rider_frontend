@@ -189,6 +189,7 @@ export interface RiderMe {
   vehicle_number: string | null;
   total_trips: number;
   rating: number | null;
+  aadhaar_number: string | null;
   bank_account_holder: string | null;
   bank_account_number: string | null;
   bank_ifsc: string | null;

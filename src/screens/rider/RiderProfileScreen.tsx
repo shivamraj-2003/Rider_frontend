@@ -4,9 +4,11 @@ import * as ImagePicker from 'expo-image-picker';
 import ScreenScaffold from '../../components/ScreenScaffold';
 import InfoCard from '../../components/InfoCard';
 import Button from '../../components/Button';
+import { GlyphTile } from '../../components/booking';
 import { useAuth, ApiError } from '../../context/AuthContext';
 import { getRiderMe, uploadRiderDocument } from '../../services/rider';
-import { colors, spacing, typography } from '../../theme';
+import { colors, font, radius, shadow, space } from '../../theme';
+import { VEHICLE_META } from '../../types';
 import type { RiderMe } from '../../types';
 
 // RiderNavigator's gate only ever mounts this screen once RiderProfile.status
@@ -40,13 +42,22 @@ export default function RiderProfileScreen() {
     }
   };
 
+  const initial = (user?.full_name?.trim()?.[0] ?? '?').toUpperCase();
+
   return (
     <ScreenScaffold title="Rider Profile">
-      <InfoCard label="Name" value={user?.full_name ?? '—'} />
-      <InfoCard label="Phone" value={user?.phone ?? '—'} />
+      <View style={styles.profileCard}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarLabel}>{initial}</Text>
+        </View>
+        <View style={styles.profileBody}>
+          <Text style={styles.profileName}>{user?.full_name ?? '—'}</Text>
+          <Text style={styles.profileSub}>{user?.phone ?? '—'}</Text>
+        </View>
+      </View>
 
       {loading ? (
-        <ActivityIndicator color={colors.primary} />
+        <ActivityIndicator color={colors.accentDark} />
       ) : riderMe ? (
         <RiderDetails riderMe={riderMe} onDocumentsUploaded={load} />
       ) : null}
@@ -60,10 +71,11 @@ export default function RiderProfileScreen() {
 }
 
 function RiderDetails({ riderMe, onDocumentsUploaded }: { riderMe: RiderMe; onDocumentsUploaded: () => void }) {
-  const [uploading, setUploading] = useState<'licence' | 'rc' | null>(null);
+  const [uploading, setUploading] = useState<'licence' | 'rc' | 'aadhaar' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const meta = VEHICLE_META[riderMe.vehicle_type];
 
-  const handleUpload = async (docType: 'licence' | 'rc') => {
+  const handleUpload = async (docType: 'licence' | 'rc' | 'aadhaar') => {
     setError(null);
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
@@ -85,9 +97,17 @@ function RiderDetails({ riderMe, onDocumentsUploaded }: { riderMe: RiderMe; onDo
 
   return (
     <View style={styles.section}>
-      <InfoCard label="Vehicle" value={`${riderMe.vehicle_type} · ${riderMe.vehicle_number ?? '—'}`} />
-      <InfoCard label="Rating" value={riderMe.rating != null ? riderMe.rating.toFixed(1) : '—'} />
-      <InfoCard label="Total trips" value={String(riderMe.total_trips)} />
+      <View style={styles.vehicleCard}>
+        <GlyphTile icon={meta.icon} tone="accent" />
+        <View style={styles.vehicleBody}>
+          <Text style={styles.vehicleTitle}>{meta.label} · {riderMe.vehicle_number ?? '—'}</Text>
+          <Text style={styles.vehicleSub}>{riderMe.total_trips} trips · {riderMe.rating != null ? `${riderMe.rating.toFixed(1)} ★` : 'No rating yet'}</Text>
+        </View>
+      </View>
+
+      {riderMe.aadhaar_number ? (
+        <InfoCard label="Aadhaar" value={`•••• •••• ${riderMe.aadhaar_number.slice(-4)}`} />
+      ) : null}
 
       {riderMe.bank_account_holder ? (
         <>
@@ -115,14 +135,53 @@ function RiderDetails({ riderMe, onDocumentsUploaded }: { riderMe: RiderMe; onDo
           onPress={() => handleUpload('rc')}
           loading={uploading === 'rc'}
         />
+        <Button
+          title="Upload Aadhaar"
+          variant="secondary"
+          onPress={() => handleUpload('aadhaar')}
+          loading={uploading === 'aadhaar'}
+        />
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  section: { gap: spacing.md },
-  docSection: { gap: spacing.md, marginTop: spacing.sm },
-  docLabel: { ...typography.bodyStrong, color: colors.textPrimary },
-  error: { ...typography.caption, color: colors.danger },
+  profileCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    backgroundColor: colors.white,
+    borderRadius: radius.card,
+    padding: space.lg,
+    ...shadow.card,
+  },
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 20,
+    backgroundColor: colors.navy800,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarLabel: { fontFamily: font.extrabold, fontSize: 22, color: colors.white },
+  profileBody: { flex: 1, gap: 2 },
+  profileName: { fontFamily: font.extrabold, fontSize: 18, color: colors.navy800 },
+  profileSub: { fontFamily: font.regular, fontSize: 13.5, color: colors.ink600 },
+  vehicleCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    backgroundColor: colors.white,
+    borderRadius: radius.card,
+    padding: space.md,
+    ...shadow.card,
+  },
+  vehicleBody: { flex: 1, gap: 2 },
+  vehicleTitle: { fontFamily: font.bold, fontSize: 15.5, color: colors.navy800 },
+  vehicleSub: { fontFamily: font.regular, fontSize: 12.5, color: colors.ink600 },
+  section: { gap: space.md },
+  docSection: { gap: space.md, marginTop: space.sm },
+  docLabel: { fontFamily: font.bold, fontSize: 13, color: colors.ink600 },
+  error: { fontFamily: font.medium, fontSize: 13, color: colors.danger },
 });

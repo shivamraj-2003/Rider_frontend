@@ -11,8 +11,10 @@ interface WizardState {
   vehicle_number: string;
   vehicle_model: string;
   licence_number: string;
+  aadhaar_number: string;
   licenceDoc: PickedDocument | null;
   rcDoc: PickedDocument | null;
+  aadhaarDoc: PickedDocument | null;
   bank_account_holder: string;
   bank_account_number: string;
   bank_ifsc: string;
@@ -23,8 +25,10 @@ const initialState: WizardState = {
   vehicle_number: '',
   vehicle_model: '',
   licence_number: '',
+  aadhaar_number: '',
   licenceDoc: null,
   rcDoc: null,
+  aadhaarDoc: null,
   bank_account_holder: '',
   bank_account_number: '',
   bank_ifsc: '',

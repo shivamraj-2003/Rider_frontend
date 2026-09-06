@@ -2,10 +2,11 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, FlatList, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import ScreenScaffold from '../../components/ScreenScaffold';
+import { GlyphTile } from '../../components/booking';
 import { getBookings } from '../../services/customer';
 import { ApiError } from '../../services/api';
-import { colors, radius, spacing, typography } from '../../theme';
-import { rupees } from '../../types';
+import { colors, font, radius, shadow, space } from '../../theme';
+import { VEHICLE_META, rupees } from '../../types';
 import type { BookingOut, BookingStatus } from '../../types';
 
 type Filter = 'all' | 'completed' | 'cancelled';
@@ -74,7 +75,7 @@ export default function RideHistoryScreen() {
       </View>
 
       {bookings === null && !error ? (
-        <ActivityIndicator color={colors.primary} />
+        <ActivityIndicator color={colors.accentDark} />
       ) : error ? (
         <Pressable onPress={load} style={styles.errorBox}>
           <Text style={styles.errorText}>{error}</Text>
@@ -86,6 +87,7 @@ export default function RideHistoryScreen() {
           keyExtractor={(item) => item.id}
           scrollEnabled={false}
           renderItem={({ item }) => <RideRow booking={item} />}
+          ItemSeparatorComponent={() => <View style={{ height: space.sm }} />}
           ListEmptyComponent={<Text style={styles.empty}>No rides yet.</Text>}
         />
       )}
@@ -99,50 +101,57 @@ function RideRow({ booking }: { booking: BookingOut }) {
   const dateLabel = date.toLocaleDateString(undefined, { day: '2-digit', month: 'short' });
   const timeLabel = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
   const cancelled = CANCELLED_STATUSES.includes(booking.status);
+  const meta = VEHICLE_META[booking.vehicle_type];
 
   return (
     <View style={styles.row}>
-      <View style={styles.rowTop}>
-        <Text style={styles.rowDate}>{dateLabel} · {timeLabel}</Text>
-        <Text style={[styles.rowStatus, cancelled && styles.rowStatusCancelled]}>
-          {STATUS_LABELS[booking.status]}
+      <GlyphTile icon={meta.icon} tone={cancelled ? 'muted' : 'accent'} />
+      <View style={styles.rowBody}>
+        <View style={styles.rowTop}>
+          <Text style={styles.rowDate}>{dateLabel} · {timeLabel}</Text>
+          <Text style={[styles.rowStatus, cancelled && styles.rowStatusCancelled]}>
+            {STATUS_LABELS[booking.status]}
+          </Text>
+        </View>
+        <Text style={styles.rowAddress} numberOfLines={1}>
+          {booking.pickup_address ?? 'Pickup'} → {booking.drop_address ?? 'Drop'}
         </Text>
+        {fare != null ? <Text style={styles.rowFare}>{rupees(fare)}</Text> : null}
       </View>
-      <Text style={styles.rowAddress} numberOfLines={1}>
-        {booking.pickup_address ?? 'Pickup'} → {booking.drop_address ?? 'Drop'}
-      </Text>
-      {fare != null ? <Text style={styles.rowFare}>{rupees(fare)}</Text> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  tabs: { flexDirection: 'row', gap: spacing.sm },
+  tabs: { flexDirection: 'row', gap: space.sm },
   tab: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    paddingVertical: space.sm,
+    borderRadius: radius.pill,
+    backgroundColor: colors.white,
+    ...shadow.card,
   },
-  tabActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  tabLabel: { ...typography.caption, color: colors.textPrimary },
-  tabLabelActive: { color: colors.textInverse },
+  tabActive: { backgroundColor: colors.navy800 },
+  tabLabel: { fontFamily: font.semibold, fontSize: 13, color: colors.navy800 },
+  tabLabelActive: { color: colors.white },
   row: {
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    gap: 4,
+    flexDirection: 'row',
+    gap: space.md,
+    padding: space.md,
+    borderRadius: radius.card,
+    backgroundColor: colors.white,
+    ...shadow.card,
   },
+  rowBody: { flex: 1, gap: 4 },
   rowTop: { flexDirection: 'row', justifyContent: 'space-between' },
-  rowDate: { ...typography.caption, color: colors.textSecondary },
-  rowStatus: { ...typography.caption, color: colors.success, fontWeight: '700' },
+  rowDate: { fontFamily: font.medium, fontSize: 12, color: colors.ink600 },
+  rowStatus: { fontFamily: font.bold, fontSize: 12, color: colors.success },
   rowStatusCancelled: { color: colors.danger },
-  rowAddress: { ...typography.bodyStrong, color: colors.textPrimary },
-  rowFare: { ...typography.body, color: colors.primary },
-  empty: { ...typography.caption, color: colors.textSecondary },
-  errorBox: { padding: spacing.lg, alignItems: 'center', gap: 4 },
-  errorText: { ...typography.body, color: colors.danger, textAlign: 'center' },
-  retry: { ...typography.caption, color: colors.primary },
+  rowAddress: { fontFamily: font.semibold, fontSize: 14.5, color: colors.navy800 },
+  rowFare: { fontFamily: font.bold, fontSize: 15, color: colors.accentDark },
+  empty: { fontFamily: font.regular, fontSize: 13.5, color: colors.ink600, textAlign: 'center', marginTop: space.xl },
+  errorBox: { padding: space.lg, alignItems: 'center', gap: 4 },
+  errorText: { fontFamily: font.regular, fontSize: 14, color: colors.danger, textAlign: 'center' },
+  retry: { fontFamily: font.semibold, fontSize: 13, color: colors.accentDark },
 });

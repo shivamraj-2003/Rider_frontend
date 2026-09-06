@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Modal, View, Text, Pressable, StyleSheet } from 'react-native';
+import { Modal, View, Text, Pressable, Animated, StyleSheet } from 'react-native';
 import { IconX } from '@tabler/icons-react-native';
 import Button from './Button';
 import TextField from './TextField';
 import { colors, font, radius, shadow, space } from '../theme';
+import { useSwipeDismiss } from '../hooks/useSwipeDismiss';
 
 // Shared cancel-ride sheet — reused by TrackRideScreen (a rider is already
 // assigned, a fee may apply) and SearchingRiderScreen (still just searching).
@@ -45,12 +46,16 @@ export default function CancelRideSheet({ visible, busy, warning, error, onClose
     onConfirm(isOther ? custom.trim() : (reason as string));
   };
 
+  const { panHandlers, style: dragStyle } = useSwipeDismiss(handleClose);
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
       <View style={styles.backdrop}>
         <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} accessibilityRole="button" accessibilityLabel="Close" />
-        <View style={styles.sheet}>
-          <View style={styles.grab} />
+        <Animated.View style={[styles.sheet, dragStyle]}>
+          <View style={styles.grabZone} {...panHandlers}>
+            <View style={styles.grab} />
+          </View>
           <View style={styles.headerRow}>
             <Text style={styles.title}>Cancel this ride?</Text>
             <Pressable onPress={handleClose} style={styles.closeBtn} accessibilityRole="button" accessibilityLabel="Close">
@@ -95,7 +100,7 @@ export default function CancelRideSheet({ visible, busy, warning, error, onClose
               style={styles.actionBtn}
             />
           </View>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -113,7 +118,8 @@ const styles = StyleSheet.create({
     gap: space.md,
     ...shadow.sheet,
   },
-  grab: { width: 44, height: 5, borderRadius: 3, backgroundColor: colors.line300, alignSelf: 'center' },
+  grabZone: { alignItems: 'center', paddingBottom: 4 },
+  grab: { width: 44, height: 5, borderRadius: 3, backgroundColor: colors.line300 },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: { fontFamily: font.extrabold, fontSize: 19, letterSpacing: -0.3, color: colors.navy800 },
   closeBtn: {

@@ -23,6 +23,7 @@ export default function OtpVerifyScreen({ route, navigation }: Props) {
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [signingIn, setSigningIn] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(resendIn);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -46,12 +47,16 @@ export default function OtpVerifyScreen({ route, navigation }: Props) {
       const session = await verifyOtp(phone, value);
       if (!session.profile_complete) {
         navigation.replace('CompleteProfile');
+        setLoading(false);
+        return;
       }
-      // Otherwise AuthContext flips to "signed-in" and RootNavigator swaps automatically.
+      // Profile is complete: AuthContext flips to "signed-in" and RootNavigator
+      // swaps to the role's home (customer / rider / admin) on its own. Keep the
+      // button in its "Signing you in…" state through that frame — no reset.
+      setSigningIn(true);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not verify code. Try again.');
       setCode('');
-    } finally {
       setLoading(false);
     }
   };
@@ -86,6 +91,9 @@ export default function OtpVerifyScreen({ route, navigation }: Props) {
           <Text style={type.body}>
             Code sent to <Text style={styles.strong}>{prettyPhone(phone)}</Text>
           </Text>
+          <Pressable onPress={() => navigation.goBack()} hitSlop={8} disabled={loading}>
+            <Text style={styles.changeNumber}>Change number</Text>
+          </Pressable>
         </View>
 
         <OtpInput
@@ -112,9 +120,9 @@ export default function OtpVerifyScreen({ route, navigation }: Props) {
         </View>
 
         <Button
-          title={loading ? 'Verifying…' : 'Verify & continue'}
+          title={signingIn ? 'Signing you in…' : loading ? 'Verifying…' : 'Verify & continue'}
           onPress={() => handleVerify()}
-          loading={loading}
+          loading={loading || signingIn}
           disabled={code.length !== OTP_LENGTH}
         />
       </View>
@@ -136,6 +144,7 @@ const styles = StyleSheet.create({
   },
   heading: { gap: space.sm },
   strong: { fontFamily: font.semibold, color: colors.navy800 },
+  changeNumber: { fontFamily: font.bold, fontSize: 13, color: colors.accentDark, marginTop: space.xs },
   error: { fontFamily: font.medium, fontSize: 13, color: colors.danger, marginTop: -space.md },
   resendRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   resendHint: { ...type.helper, fontSize: 14 },

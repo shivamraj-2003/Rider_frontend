@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { Icon } from '@tabler/icons-react-native';
+import type { TablerIcon as Icon } from '../../../types/icon';
 import { colors, font, space } from '../../../theme';
 import Button from '../../../components/Button';
 

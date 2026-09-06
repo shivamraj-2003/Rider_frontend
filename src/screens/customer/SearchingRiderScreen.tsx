@@ -125,6 +125,7 @@ export default function SearchingRiderScreen({ navigation, route }: Props) {
         <View style={styles.copy}>
           <Text style={styles.title}>Finding your rider</Text>
           <Text style={styles.sub}>Matching you with the nearest {meta.label.toLowerCase()}</Text>
+          <Text style={styles.waitHint}>Usually takes under a minute</Text>
         </View>
 
         {booking.reference ? <Text style={styles.reference}>REF {booking.reference}</Text> : null}
@@ -204,6 +205,7 @@ const styles = StyleSheet.create({
   copy: { alignItems: 'center', gap: 10 },
   title: { fontFamily: font.extrabold, fontSize: 24, letterSpacing: -0.3, color: colors.white },
   sub: { fontFamily: font.regular, fontSize: 15, color: 'rgba(255,255,255,0.62)' },
+  waitHint: { fontFamily: font.medium, fontSize: 12.5, color: 'rgba(255,255,255,0.4)', marginTop: 2 },
   reference: {
     fontFamily: font.medium,
     fontSize: 11,

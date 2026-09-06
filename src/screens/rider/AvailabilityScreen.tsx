@@ -89,7 +89,15 @@ export default function AvailabilityScreen({ navigation }: Props) {
 
   useRiderSocket(
     isOnline && !activeTrip,
-    (e) => setOffer((current) => current ?? { ...e }),
+    (e) => {
+      if (e.event === 'ride_offer_invalidated') {
+        // Another rider in the same round already accepted — drop it now
+        // rather than let it sit until its own countdown runs out.
+        setOffer((current) => (current?.booking_id === e.booking_id ? null : current));
+        return;
+      }
+      setOffer((current) => current ?? { ...e });
+    },
     { onResync: pollOffers, onPoll: pollOffers, pollMs: OFFER_POLL_FALLBACK_MS }
   );
 

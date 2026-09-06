@@ -20,6 +20,14 @@ import type { CustomerStackParamList } from '../../navigation/CustomerNavigator'
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'TrackRide'>;
 
+// Same formula DestinationSearchScreen uses for "X km" on a place row —
+// good enough for "how far is my rider" at this scale, no Mapbox call needed.
+function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const dx = (b.lat - a.lat) * 111;
+  const dy = (b.lng - a.lng) * 111 * Math.cos((a.lat * Math.PI) / 180);
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
 const STATUS_LABELS: Record<string, string> = {
   requested: 'Looking for a nearby rider…',
   assigned: 'Rider is on the way',
@@ -43,6 +51,22 @@ export default function TrackRideScreen({ route, navigation }: Props) {
   const [sosSending, setSosSending] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [shared, setShared] = useState(false);
+  const [myLocation, setMyLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+  // Best-effort "how far is my rider from ME" — falls back to the pickup
+  // point (where the customer almost always still is) if location is off.
+  useEffect(() => {
+    (async () => {
+      try {
+        const perm = await Location.getForegroundPermissionsAsync();
+        if (perm.status !== 'granted') return;
+        const pos = await Location.getCurrentPositionAsync({});
+        setMyLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      } catch {
+        // stays null — falls back to pickup below
+      }
+    })();
+  }, []);
 
   const resync = useCallback(async () => {
     try {
@@ -147,6 +171,9 @@ export default function TrackRideScreen({ route, navigation }: Props) {
   const canShareOrSos = live ? !isTerminal && live.status !== 'requested' : false;
   const insets = useSafeAreaInsets();
   const rider = live?.rider ?? booking?.rider ?? null;
+  const referencePoint = myLocation ?? (booking ? { lat: booking.pickup_lat, lng: booking.pickup_lng } : null);
+  const distanceFromMeKm =
+    referencePoint && live?.rider_location ? haversineKm(referencePoint, live.rider_location) : null;
 
   const handleCall = () => {
     if (rider?.phone) Linking.openURL(`tel:${rider.phone}`);
@@ -187,7 +214,9 @@ export default function TrackRideScreen({ route, navigation }: Props) {
               <View style={styles.locationRow}>
                 <IconMapPin size={14} color={colors.accent} strokeWidth={2} />
                 <Text style={styles.location}>
-                  Rider at {live.rider_location.lat.toFixed(4)}, {live.rider_location.lng.toFixed(4)}
+                  {distanceFromMeKm != null
+                    ? `Rider is ${distanceFromMeKm < 1 ? `${Math.round(distanceFromMeKm * 1000)} m` : `${distanceFromMeKm.toFixed(1)} km`} away`
+                    : 'Rider location updating…'}
                 </Text>
               </View>
             ) : !isTerminal ? (

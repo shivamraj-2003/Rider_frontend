@@ -1,5 +1,16 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, Animated, StyleSheet, StyleProp, ViewStyle, LayoutChangeEvent } from 'react-native';
+import {
+  View,
+  Text,
+  Pressable,
+  Animated,
+  ScrollView,
+  Dimensions,
+  StyleSheet,
+  StyleProp,
+  ViewStyle,
+  LayoutChangeEvent,
+} from 'react-native';
 import { IconChevronUp } from '@tabler/icons-react-native';
 import type { TablerIcon as Icon } from '../types/icon';
 import { colors, type, radius, shadow, font } from '../theme';
@@ -11,6 +22,17 @@ import { useSwipeCollapse } from '../hooks/useSwipeCollapse';
 // handle plus its "Swipe up" hint, so the map behind it stays as uncovered
 // as possible while it's still obviously a draggable sheet, not a stray bar.
 const PEEK_VISIBLE_PX = 60;
+
+// Hard cap on a peek sheet's own layout box. Saved places + the popular-near-
+// you list can make its natural content taller than the screen — and since
+// collapsing/half is only a visual transform (it doesn't shrink the box),
+// an uncapped sheet that tall pushed everything above it (the "Fast · Safe
+// · Affordable" banner) out of position no matter how the screen around it
+// was laid out. Capping the box and scrolling the overflow inside it
+// removes that failure case entirely, rather than working around its
+// symptoms. Also caps how much of the screen "full" can cover, per Rapido.
+const SCREEN_H = Dimensions.get('window').height;
+const MAX_SHEET_HEIGHT = Math.round(SCREEN_H * 0.62);
 
 // Booking-flow UI primitives (Phase 2). Grouped in one file because they are
 // only used together across the five booking screens; the app's generic
@@ -41,22 +63,25 @@ export function Sheet({
   const usingPeek = !!peek && !onDismiss;
   const collapseGesture = useSwipeCollapse(height, {
     peekVisible: PEEK_VISIBLE_PX,
-    // Half the screen by default (Rapido-style) — enough map is visible
-    // behind it right away, without hiding the sheet's content entirely
-    // the moment the screen loads. Drag it up to full or down to just the
-    // grab handle from there.
+    // Well under half the screen by default — leaves the map clearly
+    // visible above it right away. Drag it up for the full sheet, or down
+    // to just the grab handle, from there.
     defaultSnap: 'half',
+    halfVisibleFraction: 0.34,
   });
 
   const panHandlers = onDismiss ? dismissGesture.panHandlers : usingPeek ? collapseGesture.panHandlers : {};
   const dragStyle = onDismiss ? dismissGesture.style : usingPeek ? collapseGesture.style : null;
 
   const onLayout = (e: LayoutChangeEvent) => {
-    if (usingPeek) setHeight(e.nativeEvent.layout.height);
+    if (usingPeek) setHeight(Math.min(e.nativeEvent.layout.height, MAX_SHEET_HEIGHT));
   };
 
   return (
-    <Animated.View style={[s.sheet, style, dragStyle]} onLayout={onLayout}>
+    <Animated.View
+      style={[s.sheet, style, dragStyle, usingPeek ? { maxHeight: MAX_SHEET_HEIGHT } : null]}
+      onLayout={onLayout}
+    >
       {/* A plain View, not Pressable — Pressable's own responder handling
           fought PanResponder for the gesture and silently ate the drag.
           Tap-to-expand when peeking is handled inside useSwipeCollapse's
@@ -70,7 +95,22 @@ export function Sheet({
           </View>
         ) : null}
       </View>
-      {children}
+      {usingPeek ? (
+        // flexShrink lets this ScrollView be squeezed down to whatever room
+        // is left under the outer View's maxHeight instead of growing to
+        // its natural (unbounded) content size — that bounded height is
+        // exactly what makes it actually scroll its overflow instead of
+        // just rendering everything, same as a plain View would.
+        <ScrollView
+          style={s.scrollView}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={s.scrollBody}
+        >
+          {children}
+        </ScrollView>
+      ) : (
+        children
+      )}
     </Animated.View>
   );
 }
@@ -329,6 +369,12 @@ const s = StyleSheet.create({
     gap: 16,
     ...shadow.sheet,
   },
+  // Mirrors `sheet`'s own gap so content still reads the same once it's
+  // inside the ScrollView (a parent's `gap` doesn't reach through a
+  // ScrollView's contentContainer) — only used for the peek/scrollable
+  // variant (CustomerHomeScreen).
+  scrollView: { flexShrink: 1 },
+  scrollBody: { gap: 16, paddingBottom: 12 },
   grabZone: { alignItems: 'center', marginHorizontal: -22, paddingVertical: 4 },
   grab: { width: 44, height: 5, borderRadius: 3, backgroundColor: colors.line300 },
   grabHint: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 4 },

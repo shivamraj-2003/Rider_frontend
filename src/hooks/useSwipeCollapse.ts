@@ -10,11 +10,18 @@ type Snap = 'full' | 'half' | 'peek';
 // onLayout) to know where "half" and "peek" land.
 export function useSwipeCollapse(
   sheetHeight: number,
-  { peekVisible = 64, defaultSnap = 'half' }: { peekVisible?: number; defaultSnap?: Snap } = {}
+  {
+    peekVisible = 64,
+    defaultSnap = 'half',
+    halfVisibleFraction = 0.5,
+  }: { peekVisible?: number; defaultSnap?: Snap; halfVisibleFraction?: number } = {}
 ) {
   const screenHeight = Dimensions.get('window').height;
   const peekTranslate = Math.max(0, sheetHeight - peekVisible);
-  const halfTranslate = Math.max(0, Math.min(peekTranslate, sheetHeight - screenHeight * 0.5));
+  const halfTranslate = Math.max(
+    0,
+    Math.min(peekTranslate, sheetHeight - screenHeight * halfVisibleFraction)
+  );
   const offsets: Record<Snap, number> = { full: 0, half: halfTranslate, peek: peekTranslate };
 
   // PanResponder.create() only runs once (it's built inside useRef) — its

@@ -90,7 +90,12 @@ export default function DashboardScreen() {
                 <QuickLink
                   label="Pending Riders"
                   value={stats.riders_pending_verification}
-                  onPress={() => navigation.navigate('Analytics')}
+                  onPress={() =>
+                    (navigation.getParent() as any)?.navigate('MoreTab', {
+                      screen: 'RidersList',
+                      params: { initialStatus: 'pending_verification' },
+                    })
+                  }
                 />
               </View>
 

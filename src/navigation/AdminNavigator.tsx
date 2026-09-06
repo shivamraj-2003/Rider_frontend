@@ -95,6 +95,7 @@ export type MoreStackParamList = {
   MoreMenu: undefined;
   Payments: undefined;
   Documents: undefined;
+  RidersList: { initialStatus?: string } | undefined;
   RiderDetail: { riderId: string };
   RiderDocuments: { riderId: string; riderName?: string };
   Offers: undefined;
@@ -176,6 +177,7 @@ function MoreStack() {
       <MoreStackNav.Screen name="MoreMenu" component={MoreMenuScreen} />
       <MoreStackNav.Screen name="Payments" component={PaymentsScreen} />
       <MoreStackNav.Screen name="Documents" component={DocumentsScreen} />
+      <MoreStackNav.Screen name="RidersList" component={RidersListScreen} />
       <MoreStackNav.Screen name="RiderDetail" component={RiderDetailScreen} />
       <MoreStackNav.Screen name="RiderDocuments" component={RiderDocumentsScreen} />
       <MoreStackNav.Screen name="Offers" component={OffersScreen} />

@@ -43,7 +43,7 @@ export default function RidersListScreen() {
   const { data, loading, error, refreshing, onRefresh, refetch } = useAdminQuery(fetcher);
 
   return (
-    <AdminScreen title="Riders" back={false} refreshing={refreshing} onRefresh={onRefresh}>
+    <AdminScreen title="Riders" refreshing={refreshing} onRefresh={onRefresh}>
       <View style={styles.filters}>
         <SegmentedTabs options={STATUSES} value={status} onChange={setStatus} />
       </View>

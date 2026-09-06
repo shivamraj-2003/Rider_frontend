@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   IconCreditCard,
+  IconMotorbike,
   IconFileCheck,
   IconTag,
   IconBell,
@@ -28,6 +29,7 @@ const GROUPS: { title: string; items: { label: string; to: Dest; Icon: any }[] }
   {
     title: 'Operations',
     items: [
+      { label: 'Riders', to: 'RidersList', Icon: IconMotorbike },
       { label: 'Payments', to: 'Payments', Icon: IconCreditCard },
       { label: 'Document Verification', to: 'Documents', Icon: IconFileCheck },
       { label: 'Offers', to: 'Offers', Icon: IconTag },

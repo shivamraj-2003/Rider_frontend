@@ -33,7 +33,7 @@ export default function EarningsOverviewScreen() {
     () => Promise.all([adminApi.getReportsSummary(Number(days)), adminApi.getRevenue(Number(days))]),
     [days]
   );
-  const { data, loading, error, refreshing, onRefresh, refetch } = useAdminQuery(fetcher);
+  const { data, loading, error, refreshing, fetching, onRefresh, refetch } = useAdminQuery(fetcher);
 
   return (
     <AdminScreen title="Earnings" subtitle="Revenue & payouts" back={false} refreshing={refreshing} onRefresh={onRefresh}>
@@ -43,6 +43,8 @@ export default function EarningsOverviewScreen() {
         <LoadingState />
       ) : error && !data ? (
         <ErrorState message={error} onRetry={refetch} />
+      ) : fetching && !refreshing ? (
+        <LoadingState />
       ) : data ? (
         (() => {
           const [summary, revenue] = data;

@@ -218,6 +218,9 @@ export interface RiderMe {
   bank_account_holder: string | null;
   bank_account_number: string | null;
   bank_ifsc: string | null;
+  licence_doc_path: string | null;
+  rc_doc_path: string | null;
+  aadhaar_doc_path: string | null;
 }
 
 // GET /riders/offers, and the WS `ride_offer` event payload

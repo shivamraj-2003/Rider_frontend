@@ -6,6 +6,7 @@ import InfoCard from '../../components/InfoCard';
 import Button from '../../components/Button';
 import GradientCard from '../../components/GradientCard';
 import { GlyphTile } from '../../components/booking';
+import { IconCircleCheckFilled } from '@tabler/icons-react-native';
 import { useAuth, ApiError } from '../../context/AuthContext';
 import { getRiderMe, uploadRiderDocument } from '../../services/rider';
 import { colors, font, radius, shadow, space } from '../../theme';
@@ -109,25 +110,60 @@ function RiderDetails({ riderMe, onDocumentsUploaded }: { riderMe: RiderMe; onDo
       <View style={styles.docSection}>
         <Text style={styles.docLabel}>Documents</Text>
         {error ? <Text style={styles.error}>{error}</Text> : null}
-        <Button
-          title="Upload licence"
-          variant="secondary"
-          onPress={() => handleUpload('licence')}
+        <DocumentRow
+          label="Driving licence"
+          uploaded={!!riderMe.licence_doc_path}
           loading={uploading === 'licence'}
+          onPress={() => handleUpload('licence')}
         />
-        <Button
-          title="Upload RC"
-          variant="secondary"
-          onPress={() => handleUpload('rc')}
+        <DocumentRow
+          label="Vehicle registration (RC)"
+          uploaded={!!riderMe.rc_doc_path}
           loading={uploading === 'rc'}
+          onPress={() => handleUpload('rc')}
         />
-        <Button
-          title="Upload Aadhaar"
-          variant="secondary"
-          onPress={() => handleUpload('aadhaar')}
+        <DocumentRow
+          label="Aadhaar card"
+          uploaded={!!riderMe.aadhaar_doc_path}
           loading={uploading === 'aadhaar'}
+          onPress={() => handleUpload('aadhaar')}
         />
       </View>
+    </View>
+  );
+}
+
+function DocumentRow({
+  label,
+  uploaded,
+  loading,
+  onPress,
+}: {
+  label: string;
+  uploaded: boolean;
+  loading: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <View style={styles.docRow}>
+      <View style={styles.docRowBody}>
+        <Text style={styles.docName}>{label}</Text>
+        {uploaded ? (
+          <View style={styles.docStatusRow}>
+            <IconCircleCheckFilled size={15} color={colors.success} strokeWidth={1.75} />
+            <Text style={styles.docUploaded}>Uploaded</Text>
+          </View>
+        ) : (
+          <Text style={styles.docMissing}>Not uploaded</Text>
+        )}
+      </View>
+      <Button
+        title={uploaded ? 'Replace' : 'Upload'}
+        variant="secondary"
+        onPress={onPress}
+        loading={loading}
+        style={styles.docButton}
+      />
     </View>
   );
 }
@@ -164,7 +200,22 @@ const styles = StyleSheet.create({
   vehicleTitle: { fontFamily: font.bold, fontSize: 15.5, color: colors.navy800 },
   vehicleSub: { fontFamily: font.regular, fontSize: 12.5, color: colors.ink600 },
   section: { gap: space.md },
-  docSection: { gap: space.md, marginTop: space.sm },
-  docLabel: { fontFamily: font.bold, fontSize: 13, color: colors.ink600 },
+  docSection: { gap: space.sm, marginTop: space.sm },
+  docLabel: { fontFamily: font.bold, fontSize: 13, color: colors.ink600, marginBottom: 2 },
+  docRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    backgroundColor: colors.white,
+    borderRadius: radius.card,
+    padding: space.md,
+    ...shadow.card,
+  },
+  docRowBody: { flex: 1, gap: 3 },
+  docName: { fontFamily: font.bold, fontSize: 14.5, color: colors.navy800 },
+  docStatusRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  docUploaded: { fontFamily: font.semibold, fontSize: 12.5, color: colors.success },
+  docMissing: { fontFamily: font.regular, fontSize: 12.5, color: colors.ink400 },
+  docButton: { minWidth: 96, height: 40, paddingHorizontal: space.md },
   error: { fontFamily: font.medium, fontSize: 13, color: colors.danger },
 });

@@ -23,6 +23,9 @@ type Rt = RouteProp<MoreStackParamList, 'PricingEdit'>;
 // validation below is what actually stops an admin from saving a ₹0 base
 // fare by accident; nothing here is a real fare until they type one in.
 const BLANK: PricingRuleInput = {
+  tier1_km: 0.5,
+  tier1_fare: 0,
+  tier2_km: 2,
   base_fare: 0,
   per_km_rate: 0,
   per_minute_rate: 0,
@@ -69,7 +72,11 @@ export default function PricingEditScreen() {
 
   const save = async () => {
     if (form.base_fare <= 0) {
-      Alert.alert('Invalid pricing', 'Base fare must be greater than ₹0.');
+      Alert.alert('Invalid pricing', 'Flat fare must be greater than ₹0.');
+      return;
+    }
+    if (form.tier1_km >= form.tier2_km) {
+      Alert.alert('Invalid slabs', 'Short-hop distance must be less than the flat-fare distance.');
       return;
     }
     if (form.commission_percent < 0 || form.commission_percent > 100) {
@@ -100,18 +107,36 @@ export default function PricingEditScreen() {
       <SectionCard title="Fare">
         <View style={styles.form}>
           <Text style={styles.slabNote}>
-            Distance-slab pricing: the first 0.5 km is a fixed short-hop fare set in the
-            app. &quot;Flat fare&quot; below covers the trip up to 2 km, then &quot;rate
-            per km&quot; is charged for every kilometre past 2 km.
+            Distance-slab pricing. A flat short-hop fare up to the first distance,
+            then a flat fare up to the second distance, then a per-km rate for
+            every kilometre past it.
           </Text>
           <TextField
-            label="Flat fare up to 2 km (₹)"
+            label="Short-hop distance (km)"
+            value={String(form.tier1_km)}
+            onChangeText={(t) => set('tier1_km', num(t))}
+            keyboardType="decimal-pad"
+          />
+          <TextField
+            label={`Short-hop fare — up to ${form.tier1_km} km (₹)`}
+            value={String(form.tier1_fare)}
+            onChangeText={(t) => set('tier1_fare', num(t))}
+            keyboardType="decimal-pad"
+          />
+          <TextField
+            label="Flat-fare distance (km)"
+            value={String(form.tier2_km)}
+            onChangeText={(t) => set('tier2_km', num(t))}
+            keyboardType="decimal-pad"
+          />
+          <TextField
+            label={`Flat fare — up to ${form.tier2_km} km (₹)`}
             value={String(form.base_fare)}
             onChangeText={(t) => set('base_fare', num(t))}
             keyboardType="decimal-pad"
           />
           <TextField
-            label="Rate per km beyond 2 km (₹)"
+            label={`Rate per km — beyond ${form.tier2_km} km (₹)`}
             value={String(form.per_km_rate)}
             onChangeText={(t) => set('per_km_rate', num(t))}
             keyboardType="decimal-pad"

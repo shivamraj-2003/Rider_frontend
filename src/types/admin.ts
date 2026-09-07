@@ -249,6 +249,11 @@ export interface AppSettingRow {
 // GET /admin/pricing — PricingRuleOut
 export interface PricingRuleRow {
   vehicle_type: VehicleType;
+  // Distance slabs: flat tier1_fare up to tier1_km, then flat base_fare up to
+  // tier2_km, then per_km_rate for every km past tier2_km.
+  tier1_km: number;
+  tier1_fare: number;
+  tier2_km: number;
   base_fare: number;
   per_km_rate: number;
   per_minute_rate: number;

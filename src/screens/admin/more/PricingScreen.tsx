@@ -49,7 +49,7 @@ export default function PricingScreen() {
                 title={meta.label}
                 subtitle={
                   rule
-                    ? `Base ${money(rule.base_fare)} · ${money(rule.per_km_rate)}/km · Min ${money(rule.minimum_fare)}`
+                    ? `${money(rule.tier1_fare)} up to ${rule.tier1_km}km · ${money(rule.base_fare)} up to ${rule.tier2_km}km · ${money(rule.per_km_rate)}/km after`
                     : 'Not configured — using default rates'
                 }
                 trailing={

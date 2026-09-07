@@ -16,8 +16,11 @@ import type { AuditLogRow } from '../../../types/admin';
 // every internal key (there's nothing interesting about restating fields
 // that didn't move).
 const TRACKED_FIELDS: { key: string; label: string; isMoney?: boolean }[] = [
-  { key: 'base_fare', label: 'Base fare', isMoney: true },
-  { key: 'per_km_rate', label: 'Rate/km', isMoney: true },
+  { key: 'tier1_km', label: 'Short-hop distance (km)' },
+  { key: 'tier1_fare', label: 'Short-hop fare', isMoney: true },
+  { key: 'tier2_km', label: 'Flat-fare distance (km)' },
+  { key: 'base_fare', label: 'Flat fare', isMoney: true },
+  { key: 'per_km_rate', label: 'Rate/km beyond', isMoney: true },
   { key: 'per_minute_rate', label: 'Rate/min', isMoney: true },
   { key: 'minimum_fare', label: 'Minimum fare', isMoney: true },
   { key: 'commission_percent', label: 'Company commission' },

@@ -265,6 +265,31 @@ export interface PricingRuleRow {
 // except vehicle_type itself (that's the URL param, not an editable field).
 export type PricingRuleInput = Omit<PricingRuleRow, 'vehicle_type'>;
 
+// GET /admin/subscription-plans — SubscriptionPlanOut
+export interface SubscriptionPlanRow {
+  id: string;
+  name: string;
+  vehicle_type: VehicleType;
+  monthly_price: number;
+  included_rides: number;
+  working_days: number;
+  trip_type: 'one_way' | 'round_trip';
+  max_km_per_trip: number;
+  extra_km_charge: number;
+  extra_ride_charge: number;
+  discount_percent: number;
+  validity_days: number;
+  cancellation_window_hours: number;
+  cancel_within_window_deducts_ride: boolean;
+  pause_allowed: boolean;
+  max_pause_days: number;
+  extend_validity_on_pause: boolean;
+  is_active: boolean;
+}
+
+// POST/PUT /admin/subscription-plans body — everything but the server-issued id.
+export type SubscriptionPlanInput = Omit<SubscriptionPlanRow, 'id'>;
+
 // GET /admin/alerts
 export interface SafetyAlertRow {
   id: string;

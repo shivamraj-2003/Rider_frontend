@@ -17,6 +17,7 @@ import {
   IconReceipt2,
   IconPercentage,
   IconClockHour4,
+  IconRepeat,
 } from '@tabler/icons-react-native';
 import AdminScreen from '../../../components/admin/AdminScreen';
 import SectionCard from '../../../components/admin/SectionCard';
@@ -35,6 +36,7 @@ const GROUPS: { title: string; items: { label: string; to: Dest; Icon: any }[] }
       { label: 'Vehicle Pricing', to: 'Pricing', Icon: IconReceipt2 },
       { label: 'Commission Settings', to: 'Commission', Icon: IconPercentage },
       { label: 'Pricing History', to: 'PricingHistory', Icon: IconClockHour4 },
+      { label: 'Commute Plans', to: 'SubscriptionPlans', Icon: IconRepeat },
     ],
   },
   {

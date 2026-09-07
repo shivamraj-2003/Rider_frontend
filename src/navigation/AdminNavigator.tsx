@@ -44,6 +44,8 @@ import PricingScreen from '../screens/admin/more/PricingScreen';
 import PricingEditScreen from '../screens/admin/more/PricingEditScreen';
 import CommissionScreen from '../screens/admin/more/CommissionScreen';
 import PricingHistoryScreen from '../screens/admin/more/PricingHistoryScreen';
+import SubscriptionPlansScreen from '../screens/admin/more/SubscriptionPlansScreen';
+import SubscriptionPlanEditScreen from '../screens/admin/more/SubscriptionPlanEditScreen';
 import NotificationsScreen from '../screens/admin/more/NotificationsScreen';
 import ReportsScreen from '../screens/admin/more/ReportsScreen';
 import SupportScreen from '../screens/admin/more/SupportScreen';
@@ -109,6 +111,8 @@ export type MoreStackParamList = {
   PricingEdit: { vehicleType: VehicleType };
   Commission: undefined;
   PricingHistory: undefined;
+  SubscriptionPlans: undefined;
+  SubscriptionPlanEdit: { planId?: string } | undefined;
   Notifications: undefined;
   Reports: undefined;
   Support: undefined;
@@ -195,6 +199,8 @@ function MoreStack() {
       <MoreStackNav.Screen name="PricingEdit" component={PricingEditScreen} />
       <MoreStackNav.Screen name="Commission" component={CommissionScreen} />
       <MoreStackNav.Screen name="PricingHistory" component={PricingHistoryScreen} />
+      <MoreStackNav.Screen name="SubscriptionPlans" component={SubscriptionPlansScreen} />
+      <MoreStackNav.Screen name="SubscriptionPlanEdit" component={SubscriptionPlanEditScreen} />
       <MoreStackNav.Screen name="Notifications" component={NotificationsScreen} />
       <MoreStackNav.Screen name="Reports" component={ReportsScreen} />
       <MoreStackNav.Screen name="Support" component={SupportScreen} />

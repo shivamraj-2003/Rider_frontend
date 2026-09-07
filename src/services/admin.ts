@@ -22,6 +22,8 @@ import type {
   RevenueRow,
   RideSearchRow,
   SafetyAlertRow,
+  SubscriptionPlanInput,
+  SubscriptionPlanRow,
   UserReportRow,
 } from '../types/admin';
 import type { UserOut } from '../types';
@@ -146,3 +148,14 @@ export const getPricing = () => api.get<PricingRuleRow[]>('/admin/pricing');
 
 export const putPricing = (vehicleType: string, payload: PricingRuleInput) =>
   api.put<PricingRuleRow>(`/admin/pricing/${vehicleType}`, payload);
+
+// --- commute subscription plans --------------------------------------
+
+export const getSubscriptionPlans = () =>
+  api.get<SubscriptionPlanRow[]>('/admin/subscription-plans');
+
+export const createSubscriptionPlan = (payload: SubscriptionPlanInput) =>
+  api.post<SubscriptionPlanRow>('/admin/subscription-plans', payload);
+
+export const updateSubscriptionPlan = (planId: string, payload: SubscriptionPlanInput) =>
+  api.put<SubscriptionPlanRow>(`/admin/subscription-plans/${planId}`, payload);

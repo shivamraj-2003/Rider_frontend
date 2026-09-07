@@ -115,9 +115,23 @@ export interface AdminBookingRow {
   created_at: string;
 }
 
+// The real commission split for one ride, from its own historical snapshot
+// (the booking's stored columns + the immutable RiderEarning ledger line) —
+// never recomputed from today's pricing config, so it stays accurate even
+// after an admin changes rates later.
+export interface RideEarnings {
+  gross_fare: number;
+  commission_percent: number | null;
+  rider_percent: number | null;
+  commission_amount: number;
+  rider_earning: number;
+  fare_breakdown: Record<string, unknown> | null;
+}
+
 // GET /admin/bookings/{id}
 export interface BookingDetail {
   booking: AdminBookingRow & Record<string, unknown>;
+  earnings: RideEarnings | null;
   timeline: {
     created_at: string;
     assigned_at: string | null;
@@ -246,6 +260,10 @@ export interface PricingRuleRow {
   surge_multiplier: number;
   is_active: boolean;
 }
+
+// PUT /admin/pricing/{vehicle_type} body — everything PricingRuleRow has
+// except vehicle_type itself (that's the URL param, not an editable field).
+export type PricingRuleInput = Omit<PricingRuleRow, 'vehicle_type'>;
 
 // GET /admin/alerts
 export interface SafetyAlertRow {

@@ -14,6 +14,7 @@ import type {
   DashboardStats,
   LiveTrip,
   PendingSettlement,
+  PricingRuleInput,
   PricingRuleRow,
   PromotionInput,
   PromotionRow,
@@ -143,5 +144,5 @@ export const putSetting = (key: string, value: Record<string, unknown>, descript
 
 export const getPricing = () => api.get<PricingRuleRow[]>('/admin/pricing');
 
-export const putPricing = (vehicleType: string, payload: Omit<PricingRuleRow, 'vehicle_type' | 'is_active'>) =>
+export const putPricing = (vehicleType: string, payload: PricingRuleInput) =>
   api.put<PricingRuleRow>(`/admin/pricing/${vehicleType}`, payload);

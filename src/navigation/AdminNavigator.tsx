@@ -11,6 +11,7 @@ import {
   IconDotsCircleHorizontal,
 } from '@tabler/icons-react-native';
 import { colors, font } from '../theme';
+import type { VehicleType } from '../types';
 
 // --- Home stack ----------------------------------------------------------
 import DashboardScreen from '../screens/admin/home/DashboardScreen';
@@ -39,6 +40,10 @@ import PaymentsScreen from '../screens/admin/more/PaymentsScreen';
 import DocumentsScreen from '../screens/admin/more/DocumentsScreen';
 import OffersScreen from '../screens/admin/more/OffersScreen';
 import OfferEditScreen from '../screens/admin/more/OfferEditScreen';
+import PricingScreen from '../screens/admin/more/PricingScreen';
+import PricingEditScreen from '../screens/admin/more/PricingEditScreen';
+import CommissionScreen from '../screens/admin/more/CommissionScreen';
+import PricingHistoryScreen from '../screens/admin/more/PricingHistoryScreen';
 import NotificationsScreen from '../screens/admin/more/NotificationsScreen';
 import ReportsScreen from '../screens/admin/more/ReportsScreen';
 import SupportScreen from '../screens/admin/more/SupportScreen';
@@ -100,6 +105,10 @@ export type MoreStackParamList = {
   RiderDocuments: { riderId: string; riderName?: string };
   Offers: undefined;
   OfferEdit: { offerId?: string } | undefined;
+  Pricing: undefined;
+  PricingEdit: { vehicleType: VehicleType };
+  Commission: undefined;
+  PricingHistory: undefined;
   Notifications: undefined;
   Reports: undefined;
   Support: undefined;
@@ -182,6 +191,10 @@ function MoreStack() {
       <MoreStackNav.Screen name="RiderDocuments" component={RiderDocumentsScreen} />
       <MoreStackNav.Screen name="Offers" component={OffersScreen} />
       <MoreStackNav.Screen name="OfferEdit" component={OfferEditScreen} />
+      <MoreStackNav.Screen name="Pricing" component={PricingScreen} />
+      <MoreStackNav.Screen name="PricingEdit" component={PricingEditScreen} />
+      <MoreStackNav.Screen name="Commission" component={CommissionScreen} />
+      <MoreStackNav.Screen name="PricingHistory" component={PricingHistoryScreen} />
       <MoreStackNav.Screen name="Notifications" component={NotificationsScreen} />
       <MoreStackNav.Screen name="Reports" component={ReportsScreen} />
       <MoreStackNav.Screen name="Support" component={SupportScreen} />

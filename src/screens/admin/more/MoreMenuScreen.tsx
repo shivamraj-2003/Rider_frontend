@@ -14,6 +14,9 @@ import {
   IconShieldLock,
   IconHistory,
   IconLogout,
+  IconReceipt2,
+  IconPercentage,
+  IconClockHour4,
 } from '@tabler/icons-react-native';
 import AdminScreen from '../../../components/admin/AdminScreen';
 import SectionCard from '../../../components/admin/SectionCard';
@@ -26,6 +29,14 @@ type Nav = NativeStackNavigationProp<MoreStackParamList, 'MoreMenu'>;
 type Dest = keyof MoreStackParamList;
 
 const GROUPS: { title: string; items: { label: string; to: Dest; Icon: any }[] }[] = [
+  {
+    title: 'Pricing Management',
+    items: [
+      { label: 'Vehicle Pricing', to: 'Pricing', Icon: IconReceipt2 },
+      { label: 'Commission Settings', to: 'Commission', Icon: IconPercentage },
+      { label: 'Pricing History', to: 'PricingHistory', Icon: IconClockHour4 },
+    ],
+  },
   {
     title: 'Operations',
     items: [

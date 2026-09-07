@@ -87,6 +87,28 @@ export default function RideDetailScreen() {
             ) : null}
           </SectionCard>
 
+          {data.earnings ? (
+            <SectionCard title="Earnings breakdown">
+              <Field label="Gross fare" value={money(data.earnings.gross_fare)} />
+              <Field
+                label={
+                  data.earnings.commission_percent != null
+                    ? `Company commission (${data.earnings.commission_percent}%)`
+                    : 'Company commission'
+                }
+                value={money(data.earnings.commission_amount)}
+              />
+              <Field
+                label={
+                  data.earnings.rider_percent != null
+                    ? `Rider earnings (${data.earnings.rider_percent}%)`
+                    : 'Rider earnings'
+                }
+                value={money(data.earnings.rider_earning)}
+              />
+            </SectionCard>
+          ) : null}
+
           <SectionCard title="Timeline" padded={false}>
             {STEPS.filter((s) => data.timeline[s.key as keyof typeof data.timeline]).map((s, idx, arr) => (
               <ListRow

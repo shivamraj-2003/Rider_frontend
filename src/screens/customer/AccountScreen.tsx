@@ -1,6 +1,13 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { IconBell, IconChevronRight, IconMapPin, IconShieldCheck } from '@tabler/icons-react-native';
+import {
+  IconBell,
+  IconChevronRight,
+  IconClockHour4,
+  IconMapPin,
+  IconRepeat,
+  IconShieldCheck,
+} from '@tabler/icons-react-native';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -37,6 +44,8 @@ export default function AccountScreen({ navigation }: Props) {
       </View>
 
       <View style={styles.menu}>
+        <MenuRow icon={IconRepeat} label="Commute Subscription" onPress={() => navigation.navigate('CommuteSubscription')} />
+        <MenuRow icon={IconClockHour4} label="Subscription History" onPress={() => navigation.navigate('SubscriptionHistory')} />
         <MenuRow icon={IconMapPin} label="Saved places" onPress={() => navigation.navigate('SavedPlaces')} />
         <MenuRow icon={IconBell} label="Notifications" onPress={() => navigation.navigate('Notifications')} />
         <MenuRow icon={IconShieldCheck} label="Safety · Emergency contacts" onPress={() => navigation.navigate('EmergencyContacts')} last />

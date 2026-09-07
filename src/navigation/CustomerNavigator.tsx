@@ -17,6 +17,9 @@ import RateRideScreen from '../screens/customer/RateRideScreen';
 import SavedPlacesScreen from '../screens/customer/SavedPlacesScreen';
 import NotificationsScreen from '../screens/customer/NotificationsScreen';
 import EmergencyContactsScreen from '../screens/customer/EmergencyContactsScreen';
+import CommuteSubscriptionScreen from '../screens/customer/subscription/CommuteSubscriptionScreen';
+import SubscribeCommuteScreen from '../screens/customer/subscription/SubscribeCommuteScreen';
+import SubscriptionHistoryScreen from '../screens/customer/subscription/SubscriptionHistoryScreen';
 import LocationPermissionScreen from '../screens/auth/LocationPermissionScreen';
 import SplashScreen from '../screens/auth/SplashScreen';
 import { LOCATION_PROMPT_DONE_KEY } from '../constants/storage';
@@ -35,6 +38,9 @@ export type CustomerStackParamList = {
   SavedPlaces: undefined;
   Notifications: undefined;
   EmergencyContacts: undefined;
+  CommuteSubscription: undefined;
+  SubscribeCommute: { planId: string };
+  SubscriptionHistory: undefined;
 };
 
 export type CustomerTabParamList = {
@@ -120,6 +126,9 @@ export default function CustomerNavigator() {
       <Stack.Screen name="SavedPlaces" component={SavedPlacesScreen} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen name="EmergencyContacts" component={EmergencyContactsScreen} />
+      <Stack.Screen name="CommuteSubscription" component={CommuteSubscriptionScreen} />
+      <Stack.Screen name="SubscribeCommute" component={SubscribeCommuteScreen} />
+      <Stack.Screen name="SubscriptionHistory" component={SubscriptionHistoryScreen} />
     </Stack.Navigator>
   );
 }

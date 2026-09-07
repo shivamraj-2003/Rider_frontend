@@ -273,3 +273,84 @@ export interface EarningsEntry {
   settlement_status: string;
   created_at: string;
 }
+
+// --- Customer daily-commute subscription (Home <-> Office), not a
+// company/office plan. Mirrors app/schemas/subscription.py.
+
+export type SubscriptionTripType = 'one_way' | 'round_trip';
+export type SubscriptionStatus = 'active' | 'paused' | 'expired' | 'cancelled';
+export const COMMUTE_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
+export type CommuteDay = (typeof COMMUTE_DAYS)[number];
+
+// GET /subscriptions/plans
+export interface SubscriptionPlan {
+  id: string;
+  name: string;
+  vehicle_type: VehicleType;
+  monthly_price: number;
+  included_rides: number;
+  working_days: number;
+  trip_type: SubscriptionTripType;
+  max_km_per_trip: number;
+  extra_km_charge: number;
+  extra_ride_charge: number;
+  discount_percent: number;
+  validity_days: number;
+  cancellation_window_hours: number;
+  cancel_within_window_deducts_ride: boolean;
+  pause_allowed: boolean;
+  max_pause_days: number;
+  extend_validity_on_pause: boolean;
+  is_active: boolean;
+}
+
+export interface SubscriptionLocation {
+  address: string;
+  lat: number;
+  lng: number;
+}
+
+// POST /subscriptions/preview-route
+export interface RoutePreview {
+  distance_km: number;
+  duration_min: number;
+  max_km_per_trip: number;
+  within_limit: boolean;
+  excess_km: number;
+  extra_km_charge_per_trip: number;
+}
+
+// GET /subscriptions/me, /subscriptions/history, and the mutation responses
+export interface Subscription {
+  id: string;
+  plan_id: string;
+  plan_name: string;
+  vehicle_type: VehicleType;
+  monthly_price: number;
+  trip_type: SubscriptionTripType;
+  total_rides: number;
+  used_rides: number;
+  remaining_rides: number;
+  max_km_per_trip: number;
+  route_distance_km: number;
+  extra_km_charge: number;
+  extra_ride_charge: number;
+  cancellation_window_hours: number;
+  cancel_within_window_deducts_ride: boolean;
+  pause_allowed: boolean;
+  max_pause_days: number;
+  home_address: string;
+  home_lat: number;
+  home_lng: number;
+  office_address: string;
+  office_lat: number;
+  office_lng: number;
+  days: CommuteDay[];
+  pickup_time: string; // "HH:MM:SS"
+  return_time: string | null;
+  status: SubscriptionStatus;
+  is_expiring_soon: boolean;
+  start_date: string;
+  end_date: string;
+  paused_until: string | null;
+}

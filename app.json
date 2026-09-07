@@ -3,6 +3,7 @@
     "name": "Top Rider",
     "slug": "Rider_frontend",
     "version": "1.0.0",
+    "owner": "toprider123",
     "orientation": "portrait",
     "icon": "./assets/logo.jpeg",
     "userInterfaceStyle": "light",
@@ -38,6 +39,11 @@
         }
       ],
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "2bce7393-8c56-4863-824c-a580333166a7"
+      }
+    }
   }
 }

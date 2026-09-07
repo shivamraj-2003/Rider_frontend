@@ -12,7 +12,7 @@ import WizardStepScaffold from './WizardStepScaffold';
 
 type Props = NativeStackScreenProps<BecomeRiderStackParamList, 'VehicleDetails'>;
 
-const VEHICLE_TYPES: VehicleType[] = ['bike', 'auto', 'car'];
+const VEHICLE_TYPES: VehicleType[] = ['bike', 'auto', 'tempo', 'car'];
 const AADHAAR_RE = /^\d{12}$/;
 
 export default function RiderVehicleDetailsScreen({ navigation }: Props) {

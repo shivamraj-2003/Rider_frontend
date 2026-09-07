@@ -26,11 +26,11 @@ const PEEK_VISIBLE_PX = 60;
 // Hard cap on a peek sheet's own layout box. Saved places + the popular-near-
 // you list can make its natural content taller than the screen — and since
 // collapsing/half is only a visual transform (it doesn't shrink the box),
-// an uncapped sheet that tall pushed everything above it (the "Fast · Safe
-// · Affordable" banner) out of position no matter how the screen around it
-// was laid out. Capping the box and scrolling the overflow inside it
-// removes that failure case entirely, rather than working around its
-// symptoms. Also caps how much of the screen "full" can cover, per Rapido.
+// an uncapped sheet that tall pushed everything above it out of position no
+// matter how the screen around it was laid out. Capping the box and scrolling
+// the overflow inside it removes that failure case entirely, rather than
+// working around its symptoms. Also caps how much of the screen "full" can
+// cover, per Rapido.
 const SCREEN_H = Dimensions.get('window').height;
 const MAX_SHEET_HEIGHT = Math.round(SCREEN_H * 0.62);
 

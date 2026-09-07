@@ -11,9 +11,8 @@ import { useAppConfig } from '../../context/AppConfigContext';
 import { getPopularPlaces, getSavedPlaces, reverseGeocode } from '../../services/customer';
 import { getNearbyRiders } from '../../services/rider';
 import { colors, font, radius, shadow } from '../../theme';
-import { Sheet, GlyphTile, PlaceRow } from '../../components/booking';
+import { Sheet, PlaceRow } from '../../components/booking';
 import MapCanvas from '../../components/MapCanvas';
-import { VEHICLE_META } from '../../types';
 import type { NearbyRider, Place, PopularPlace, SavedPlace } from '../../types';
 import type { CustomerStackParamList, CustomerTabParamList } from '../../navigation/CustomerNavigator';
 
@@ -105,7 +104,6 @@ export default function CustomerHomeScreen({ navigation }: Props) {
 
   const insets = useSafeAreaInsets();
   const bookingOff = config?.settings.booking_enabled.enabled === false;
-  const vehicleTypes = config?.vehicle_types ?? [];
 
   const toSearch = (drop?: Place) =>
     navigation.navigate('DestinationSearch', { pickup, drop: drop ?? null });
@@ -144,22 +142,6 @@ export default function CustomerHomeScreen({ navigation }: Props) {
       </View>
 
       <View style={styles.bottomGroup}>
-        {!bookingOff && vehicleTypes.length > 0 ? (
-          <View style={styles.fleetBanner}>
-            <View style={styles.fleetIcons}>
-              {vehicleTypes.map((v) => (
-                <GlyphTile key={v} icon={VEHICLE_META[v].icon} tone="dark" />
-              ))}
-            </View>
-            <View style={styles.fleetCopy}>
-              <Text style={styles.fleetTitle}>Fast · Safe · Affordable</Text>
-              <Text style={styles.fleetSub}>
-                {vehicleTypes.map((v) => VEHICLE_META[v].label).join(' · ')} rides across the city
-              </Text>
-            </View>
-          </View>
-        ) : null}
-
         <View style={styles.sheetWrap}>
           <Sheet peek>
             <Text style={styles.title}>{bookingOff ? 'Booking paused' : 'Where are you going?'}</Text>
@@ -285,28 +267,11 @@ const styles = StyleSheet.create({
   // Pinned to the bottom edge, not flex + marginTop:'auto' — the Sheet's
   // full content (saved places, popular list...) can be taller than the
   // visible space below topRow even though it's usually shown collapsed
-  // (collapsing is a visual transform, it doesn't shrink the layout box).
-  // With marginTop:'auto', that tall-but-collapsed box left no room to push
-  // itself down, so "Fast · Safe · Affordable" ended up rendered right
-  // under the top row instead of near the bottom. Anchoring to the bottom
-  // edge directly means its position never depends on how tall the sheet's
-  // full content happens to be.
+  // (collapsing is a visual transform, it doesn't shrink the layout box),
+  // which with marginTop:'auto' left no room to push itself down. Anchoring
+  // to the bottom edge directly means its position never depends on how tall
+  // the sheet's full content happens to be.
   bottomGroup: { position: 'absolute', left: 0, right: 0, bottom: 0 },
-  fleetBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    marginHorizontal: 20,
-    marginBottom: 14,
-    padding: 14,
-    borderRadius: radius.card,
-    backgroundColor: colors.white,
-    ...shadow.card,
-  },
-  fleetIcons: { flexDirection: 'row', gap: 6 },
-  fleetCopy: { flex: 1, gap: 2 },
-  fleetTitle: { fontFamily: font.extrabold, fontSize: 14, color: colors.navy800 },
-  fleetSub: { fontFamily: font.regular, fontSize: 12, color: colors.ink600 },
   sheetWrap: {},
   title: { fontFamily: font.extrabold, fontSize: 21, letterSpacing: -0.4, color: colors.navy800 },
   maintenance: { fontFamily: font.regular, fontSize: 15, lineHeight: 23, color: colors.ink600 },

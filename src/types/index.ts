@@ -2,7 +2,7 @@
 // Enums and shapes mirror Rider_backend's FRONTEND_INTEGRATION.md verbatim —
 // keep this file in sync with that guide, not the other way around.
 
-import { IconCar, IconMotorbike, IconScooter } from '@tabler/icons-react-native';
+import { IconCar, IconMotorbike, IconScooter, IconTruck } from '@tabler/icons-react-native';
 import type { TablerIcon as Icon } from './icon';
 
 // GET /bookings and other paginated list endpoints — mirrors app/schemas/common.py Page.
@@ -34,7 +34,7 @@ export const TERMINAL_BOOKING_STATUSES: BookingStatus[] = [
 
 export type RiderStatus = 'pending_verification' | 'approved' | 'suspended' | 'rejected';
 export type RiderAvailability = 'offline' | 'online' | 'on_trip';
-export type VehicleType = 'bike' | 'auto' | 'car';
+export type VehicleType = 'bike' | 'auto' | 'tempo' | 'car';
 export type PaymentMethod = 'cash' | 'online' | 'wallet';
 export type PaymentStatus = 'pending' | 'authorized' | 'paid' | 'failed' | 'refunded';
 export type SafetyAlertType = 'sos' | 'prolonged_stop' | 'route_deviation' | 'overspeed';
@@ -181,6 +181,7 @@ export interface FareQuote extends FareEstimate {
 export const VEHICLE_META: Record<VehicleType, { label: string; icon: Icon; seats: string }> = {
   bike: { label: 'Bike', icon: IconMotorbike, seats: '1 seat' },
   auto: { label: 'Auto', icon: IconScooter, seats: '3 seats' },
+  tempo: { label: 'Tempo', icon: IconTruck, seats: 'Goods · 6 seats' },
   car: { label: 'Car', icon: IconCar, seats: '4 seats · AC' },
 };
 

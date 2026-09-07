@@ -25,7 +25,12 @@ const STATUSES = [
   { value: 'rejected', label: 'Rejected' },
 ];
 
-const VEHICLE_LABEL: Record<VehicleType, string> = { bike: 'Bike', auto: 'Auto', car: 'Car' };
+const VEHICLE_LABEL: Record<VehicleType, string> = {
+  bike: 'Bike',
+  auto: 'Auto',
+  tempo: 'Tempo',
+  car: 'Car',
+};
 
 export default function RidersListScreen() {
   const navigation = useNavigation<Nav>();

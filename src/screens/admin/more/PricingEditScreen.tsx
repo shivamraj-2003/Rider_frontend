@@ -99,14 +99,19 @@ export default function PricingEditScreen() {
     <AdminScreen title={`${meta.label} pricing`} subtitle="Applies to new rides within seconds">
       <SectionCard title="Fare">
         <View style={styles.form}>
+          <Text style={styles.slabNote}>
+            Distance-slab pricing: the first 0.5 km is a fixed short-hop fare set in the
+            app. &quot;Flat fare&quot; below covers the trip up to 2 km, then &quot;rate
+            per km&quot; is charged for every kilometre past 2 km.
+          </Text>
           <TextField
-            label="Base fare (₹)"
+            label="Flat fare up to 2 km (₹)"
             value={String(form.base_fare)}
             onChangeText={(t) => set('base_fare', num(t))}
             keyboardType="decimal-pad"
           />
           <TextField
-            label="Rate per km (₹)"
+            label="Rate per km beyond 2 km (₹)"
             value={String(form.per_km_rate)}
             onChangeText={(t) => set('per_km_rate', num(t))}
             keyboardType="decimal-pad"
@@ -118,7 +123,7 @@ export default function PricingEditScreen() {
             keyboardType="decimal-pad"
           />
           <TextField
-            label="Minimum fare (₹)"
+            label="Minimum fare (₹, 0 = slab governs)"
             value={String(form.minimum_fare)}
             onChangeText={(t) => set('minimum_fare', num(t))}
             keyboardType="decimal-pad"
@@ -212,4 +217,5 @@ const styles = StyleSheet.create({
   splitLabel: { fontFamily: font.medium, fontSize: 11, color: colors.ink400 },
   splitValue: { fontFamily: font.extrabold, fontSize: 18, color: colors.navy800 },
   splitNote: { fontFamily: font.regular, fontSize: 11.5, lineHeight: 17, color: colors.ink400 },
+  slabNote: { fontFamily: font.regular, fontSize: 11.5, lineHeight: 17, color: colors.ink400 },
 });

@@ -62,8 +62,8 @@ account (see below).
 
 - **Location permission** can be turned off in your device settings; core
   features of the App will not work without it.
-- **Account deletion** — email the address below to have your account and
-  personal data deleted, subject to records we must keep by law.
+- **Account deletion** — contact us at the number below to have your account
+  and personal data deleted, subject to records we must keep by law.
 
 ## Children
 
@@ -75,4 +75,4 @@ We will update this page and the "last updated" date when this policy changes.
 
 ## Contact
 
-For privacy questions or account deletion requests: **kks757171@gmail.com**
+For privacy questions or account deletion requests: **+91 98625 90885**

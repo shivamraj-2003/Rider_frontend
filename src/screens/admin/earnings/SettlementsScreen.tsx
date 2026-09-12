@@ -9,9 +9,11 @@ import { useAdminQuery } from '../../../components/admin/useAdminQuery';
 import { money, relativeTime } from '../../../components/admin/format';
 import * as adminApi from '../../../services/admin';
 import { ApiError } from '../../../context/AuthContext';
+import { useAppConfig } from '../../../context/AppConfigContext';
 import { colors, font, space } from '../../../theme';
 
 export default function SettlementsScreen() {
+  const { config } = useAppConfig();
   const [busyId, setBusyId] = useState<string | null>(null);
   const fetcher = useCallback(() => adminApi.getPendingSettlements(), []);
   const { data, loading, error, refreshing, onRefresh, refetch } = useAdminQuery(fetcher);
@@ -37,6 +39,31 @@ export default function SettlementsScreen() {
         },
       },
     ]);
+  };
+
+  const payout = (riderId: string, amount: number) => {
+    Alert.alert(
+      'Pay via Razorpay?',
+      `Send ${money(amount)} to this rider's bank account now. This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Pay now',
+          onPress: async () => {
+            setBusyId(riderId);
+            try {
+              const res = await adminApi.payoutRider(riderId);
+              Alert.alert('Payout started', `${money(res.amount)} · status: ${res.status}`);
+              await refetch();
+            } catch (e) {
+              Alert.alert('Payout failed', e instanceof ApiError ? e.message : 'Try again.');
+            } finally {
+              setBusyId(null);
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -65,13 +92,25 @@ export default function SettlementsScreen() {
                   trailing={money(r.amount_due)}
                   divider={false}
                 />
-                <View style={styles.btn}>
-                  <Button
-                    title="Settle now"
-                    variant="navy"
-                    loading={busyId === r.rider_id}
-                    onPress={() => settle(r.rider_id, r.amount_due)}
-                  />
+                <View style={[styles.btn, styles.btnRow]}>
+                  {config?.payouts_enabled ? (
+                    <View style={styles.btnFlex}>
+                      <Button
+                        title="Pay via Razorpay"
+                        variant="navy"
+                        loading={busyId === r.rider_id}
+                        onPress={() => payout(r.rider_id, r.amount_due)}
+                      />
+                    </View>
+                  ) : null}
+                  <View style={styles.btnFlex}>
+                    <Button
+                      title={config?.payouts_enabled ? 'Mark settled' : 'Settle now'}
+                      variant={config?.payouts_enabled ? 'secondary' : 'navy'}
+                      loading={busyId === r.rider_id}
+                      onPress={() => settle(r.rider_id, r.amount_due)}
+                    />
+                  </View>
                 </View>
               </View>
             ))}
@@ -89,4 +128,6 @@ const styles = StyleSheet.create({
   item: { paddingBottom: space.md },
   divider: { borderBottomWidth: 1, borderBottomColor: colors.line100 },
   btn: { paddingHorizontal: space.md },
+  btnRow: { flexDirection: 'row', gap: space.sm },
+  btnFlex: { flex: 1 },
 });

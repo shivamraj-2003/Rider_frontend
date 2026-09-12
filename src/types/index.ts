@@ -67,6 +67,9 @@ export interface AppConfig {
   role: UserRole;
   maps_enabled: boolean;
   payments_enabled: boolean;
+  // True only once Razorpay AND a RazorpayX settlement account are both
+  // configured - admin can pay riders directly, not just record a payout.
+  payouts_enabled: boolean;
   mapbox_public_token: string | null;
   mapbox_style_url: string | null;
   vehicle_types: VehicleType[];

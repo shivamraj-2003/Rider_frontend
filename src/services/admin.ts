@@ -99,6 +99,15 @@ export const settleRider = (riderId: string, until?: string) =>
     { rider_id: riderId, ...(until ? { until } : {}) }
   );
 
+// Actually pays the rider via Razorpay (only when config.payouts_enabled) —
+// distinct from settleRider, which just records a manual "paid outside the
+// app" entry with no money movement.
+export const payoutRider = (riderId: string, until?: string) =>
+  api.post<{ id: string; rider_id: string; amount: number; status: string; gateway_payout_id: string | null }>(
+    '/admin/settlements/payout',
+    { rider_id: riderId, ...(until ? { until } : {}) }
+  );
+
 // --- payments -------------------------------------------------------
 
 export const getPayments = (params: { status?: string; method?: string; limit?: number; offset?: number } = {}) =>

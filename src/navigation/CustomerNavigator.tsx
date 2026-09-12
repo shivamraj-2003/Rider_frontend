@@ -13,6 +13,7 @@ import PaymentScreen from '../screens/customer/PaymentScreen';
 import SearchingRiderScreen from '../screens/customer/SearchingRiderScreen';
 import NoRidersFoundScreen from '../screens/customer/NoRidersFoundScreen';
 import TrackRideScreen from '../screens/customer/TrackRideScreen';
+import PayNowScreen from '../screens/customer/PayNowScreen';
 import RateRideScreen from '../screens/customer/RateRideScreen';
 import SavedPlacesScreen from '../screens/customer/SavedPlacesScreen';
 import NotificationsScreen from '../screens/customer/NotificationsScreen';
@@ -34,6 +35,7 @@ export type CustomerStackParamList = {
   SearchingRider: { booking: BookingOut; pickup: Place; drop: Place };
   NoRidersFound: { bookingId: string; pickup: Place; drop: Place };
   TrackRide: { bookingId: string };
+  PayNow: { bookingId: string; amount: number };
   RateRide: { bookingId: string };
   SavedPlaces: undefined;
   Notifications: undefined;
@@ -122,6 +124,7 @@ export default function CustomerNavigator() {
       <Stack.Screen name="SearchingRider" component={SearchingRiderScreen} />
       <Stack.Screen name="NoRidersFound" component={NoRidersFoundScreen} />
       <Stack.Screen name="TrackRide" component={TrackRideScreen} />
+      <Stack.Screen name="PayNow" component={PayNowScreen} options={{ gestureEnabled: false }} />
       <Stack.Screen name="RateRide" component={RateRideScreen} />
       <Stack.Screen name="SavedPlaces" component={SavedPlacesScreen} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />

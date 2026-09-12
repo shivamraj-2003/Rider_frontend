@@ -74,7 +74,14 @@ export default function TrackRideScreen({ route, navigation }: Props) {
       setLive(data);
       setError(null);
       if (data.status === 'completed') {
-        navigation.replace('RateRide', { bookingId });
+        // Online rides need the fare actually collected before rating; cash
+        // rides skip straight to rating (the rider collects it in person).
+        const full = await getBooking(bookingId).catch(() => null);
+        if (full?.payment_method === 'online' && full.final_fare) {
+          navigation.replace('PayNow', { bookingId, amount: full.final_fare });
+        } else {
+          navigation.replace('RateRide', { bookingId });
+        }
         return;
       }
       if (TERMINAL_BOOKING_STATUSES.includes(data.status)) refresh();

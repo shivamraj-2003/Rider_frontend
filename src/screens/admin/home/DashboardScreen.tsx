@@ -46,6 +46,7 @@ export default function DashboardScreen() {
           return (
             <>
               <StatGrid>
+                <StatCard label="Total Earnings" value={compactMoney(stats.total_revenue)} />
                 <StatCard label="Total Users" value={stats.total_users.toLocaleString('en-IN')} />
                 <StatCard label="Total Riders" value={stats.total_riders.toLocaleString('en-IN')} />
                 <StatCard label="Active Rides" value={stats.active_bookings} />

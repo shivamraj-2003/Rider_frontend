@@ -27,6 +27,10 @@ export interface DashboardStats {
   total_completed: number;
   total_cancelled: number;
   rider_earnings_today: number;
+  // All-time earnings from rides, no date filter.
+  total_revenue: number;
+  total_commission: number;
+  total_rider_earnings: number;
 }
 
 // GET /admin/trips/live

@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Button from '../../components/Button';
 import GradientCard from '../../components/GradientCard';
+import OtpInput from '../../components/OtpInput';
 import { TripRail } from '../../components/booking';
 import { useAppConfig } from '../../context/AppConfigContext';
 import { useBookingSocket } from '../../hooks/useBookingSocket';
@@ -24,6 +25,7 @@ export default function RiderTripScreen({ route, navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [acting, setActing] = useState(false);
   const [cashCollected, setCashCollected] = useState(false);
+  const [startCode, setStartCode] = useState('');
 
   const resync = useCallback(async () => {
     try {
@@ -58,13 +60,18 @@ export default function RiderTripScreen({ route, navigation }: Props) {
     }
   };
 
-  const handleStart = async () => {
+  const handleStart = async (code: string = startCode) => {
+    if (code.length !== 4) {
+      setError('Enter the 4-digit code the customer shows you.');
+      return;
+    }
     setActing(true);
     setError(null);
     try {
-      await startTrip(bookingId);
+      await startTrip(bookingId, code);
       await resync();
     } catch (err) {
+      setStartCode('');
       setError(err instanceof ApiError ? err.message : 'Could not start trip');
     } finally {
       setActing(false);
@@ -146,12 +153,30 @@ export default function RiderTripScreen({ route, navigation }: Props) {
       ) : booking.status === 'assigned' ? (
         <Button title="I've arrived" onPress={handleArrived} loading={acting} />
       ) : booking.status === 'arrived' ? (
-        <Button title="Start trip" onPress={handleStart} loading={acting} />
+        <View style={styles.otpCard}>
+          <Text style={styles.otpTitle}>Ask the customer for their ride code</Text>
+          <Text style={styles.otpHint}>It is shown on their screen. The trip starts once it matches.</Text>
+          <OtpInput
+            value={startCode}
+            onChangeText={(t) => {
+              setStartCode(t);
+              setError(null);
+            }}
+            onComplete={handleStart}
+            length={4}
+            error={!!error}
+          />
+          <Button title="Start trip" onPress={() => handleStart()} loading={acting} />
+        </View>
       ) : booking.status === 'in_progress' ? (
         <Button title="Complete trip" onPress={handleComplete} loading={acting} />
       ) : booking.status === 'completed' ? (
-        booking.payment_method === 'cash' && !cashCollected ? (
-          <Button title="Collect cash" onPress={handleCollectCash} loading={acting} />
+        booking.payment_method !== 'wallet' && !cashCollected ? (
+          <Button
+            title={booking.payment_method === 'cash' ? 'Collect cash' : 'Payment received on UPI'}
+            onPress={handleCollectCash}
+            loading={acting}
+          />
         ) : (
           <Button title="Done" onPress={finishAndReturn} />
         )
@@ -175,4 +200,13 @@ const styles = StyleSheet.create({
     ...shadow.card,
   },
   error: { fontFamily: font.medium, fontSize: 13, color: colors.danger },
+  otpCard: {
+    gap: space.md,
+    backgroundColor: colors.white,
+    borderRadius: radius.card,
+    padding: space.lg,
+    ...shadow.card,
+  },
+  otpTitle: { fontFamily: font.bold, fontSize: 16, color: colors.navy800 },
+  otpHint: { fontFamily: font.regular, fontSize: 13, color: colors.ink600 },
 });

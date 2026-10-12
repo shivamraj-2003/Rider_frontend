@@ -114,15 +114,13 @@ export default function PaymentScreen({ navigation, route }: Props) {
               selected={method === 'cash'}
               onPress={() => setMethod('cash')}
             />
-            {config?.payments_enabled ? (
-              <PaymentRow
-                label="Pay online"
-                sub="UPI, card or netbanking"
-                icon={IconQrcode}
-                selected={method === 'online'}
-                onPress={() => setMethod('online')}
-              />
-            ) : null}
+            <PaymentRow
+              label="Pay by UPI"
+              sub="Scan the QR after the ride"
+              icon={IconQrcode}
+              selected={method === 'online'}
+              onPress={() => setMethod('online')}
+            />
           </View>
 
           <FareBreakdown

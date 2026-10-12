@@ -124,6 +124,9 @@ export interface BookingOut {
   completed_at: string | null;
   created_at: string;
   rider?: AssignedRider | null;
+  // Customer-only, while the rider is assigned/arrived: read this out to the
+  // rider so they can start the trip. Always null on the rider's side.
+  ride_otp?: string | null;
 }
 
 // GET /places/search, GET /places/reverse, GET /places/saved

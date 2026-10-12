@@ -73,6 +73,11 @@ export default function TrackRideScreen({ route, navigation }: Props) {
       const data = await getLiveBooking(bookingId);
       setLive(data);
       setError(null);
+      // The ride code only exists once a rider is assigned, so re-fetch the
+      // full booking when we reach that state (the mount fetch ran too early).
+      if (data.status === 'assigned' || data.status === 'arrived') {
+        getBooking(bookingId).then(setBooking).catch(() => {});
+      }
       if (data.status === 'completed') {
         // Online rides need the fare actually collected before rating; cash
         // rides skip straight to rating (the rider collects it in person).
@@ -231,6 +236,16 @@ export default function TrackRideScreen({ route, navigation }: Props) {
             ) : null}
           </GradientCard>
 
+          {booking?.ride_otp && (live.status === 'assigned' || live.status === 'arrived') ? (
+            <View style={styles.otpCard}>
+              <Text style={styles.otpLabel}>Your ride code</Text>
+              <Text style={styles.otpValue} accessibilityLabel={`Ride code ${booking.ride_otp.split('').join(' ')}`}>
+                {booking.ride_otp.split('').join(' ')}
+              </Text>
+              <Text style={styles.otpHint}>Tell this code to your rider to start the trip. Do not share it earlier.</Text>
+            </View>
+          ) : null}
+
           {rider && !isTerminal ? (
             <View style={styles.riderCard}>
               <View style={styles.riderAvatar}>
@@ -328,6 +343,17 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...shadow.card,
   },
+  otpCard: {
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.white,
+    borderRadius: radius.card,
+    padding: space.lg,
+    ...shadow.card,
+  },
+  otpLabel: { fontFamily: font.medium, fontSize: 13, color: colors.ink400 },
+  otpValue: { fontFamily: font.extrabold, fontSize: 40, letterSpacing: 6, color: colors.navy800 },
+  otpHint: { fontFamily: font.regular, fontSize: 12.5, color: colors.ink600, textAlign: 'center' },
   riderCard: {
     flexDirection: 'row',
     alignItems: 'center',

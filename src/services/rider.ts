@@ -83,8 +83,8 @@ export function markArrived(bookingId: string) {
   return api.post<BookingOut>(`/bookings/${bookingId}/arrived`);
 }
 
-export function startTrip(bookingId: string) {
-  return api.post<BookingOut>(`/bookings/${bookingId}/start`);
+export function startTrip(bookingId: string, otp: string) {
+  return api.post<BookingOut>(`/bookings/${bookingId}/start`, { otp });
 }
 
 // No manual distance/duration entry — the backend fills both in itself

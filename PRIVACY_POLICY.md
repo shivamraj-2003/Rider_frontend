@@ -16,8 +16,8 @@ customers using the App.
 - **Rider documents** — for riders only: photos of your driving licence and
   vehicle papers, and vehicle details (type, number), used to verify you are
   eligible to accept trips.
-- **Payment method choice** — e.g. cash or online. Card and UPI details, when
-  online payment is used, are handled by our payment processor (Razorpay) and
+- **Payment method choice** — cash or UPI. When you pay by UPI you scan a QR
+  code in your own UPI app; your UPI credentials never pass through the App and
   are not stored by us.
 
 **Collected automatically:**
@@ -47,7 +47,7 @@ customers using the App.
   location, and phone (for the in-app call) are shared with the other party
   for the duration of a trip.
 - **Service providers** — hosting, maps (Mapbox), SMS (for the login code),
-  and payments (Razorpay), only as needed to run the service.
+  and push notifications (Google Firebase), only as needed to run the service.
 - **Authorities** — when required by law or to protect someone's safety.
 
 We do not sell your personal information.
